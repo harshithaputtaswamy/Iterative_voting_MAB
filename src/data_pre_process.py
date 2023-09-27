@@ -25,13 +25,13 @@ def process_soc_data(generate_data, input_data_file = "", output_data_file = "")
         voting_dict[json.dumps(res[0])] = res[1]
 
     res_dict["flattened_voting_profile"] = voting_dict
-    res_dict["full_voting_profile"] = [json.loads(key) for key, value in voting_dict.items() for _ in range(value)]
+    # res_dict["full_voting_profile"] = [json.loads(key) for key, value in voting_dict.items() for _ in range(value)]
     res_dict["borda_scores"] = borda_scores(instance)
 
     with open(output_data_file, "w") as outfile:
         json.dump(res_dict, outfile)
 
-    # print(borda_scores(instance), generate_reward (voting_dict, res_dict["num_candidates"]))
+    print(borda_scores(instance), generate_reward (voting_dict, res_dict["num_candidates"]))
 
 
 # process_soc_data(False, "/home/harshitha/fstore/harshitha/soc/00004-00000004.soc", "parsed_soc_data.json")   #to read data from pre existing file
