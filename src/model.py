@@ -19,66 +19,29 @@ class model():
 
 
     # implement epsilon greedy method to return the top candidate of the voter and the submitted voter preference
-    def epsilon_greedy_voting(self, curr_borda_scores, voter, voter_ballet_dict, voter_preferences, winning_ballot):
+    def epsilon_greedy_voting(self, curr_borda_scores, voter, voter_ballet_dict):
         if np.random.random() > self.epsilon:   # expliotation
 
-            # # select a candidate get the borda score and see if it gives the highest borda score, look one step ahead
-            # ballet_to_borda_map = {}    # dictionary of ballet and corresponding borda score
-            # for ballet in voter_ballet_dict["ballet"]:
-            #     preference = copy(voter_preferences)
-            #     if ballet in voter_preferences:
-            #         preference[ballet] += 1
-            #     else:
-            #         preference[ballet] = 1
-
-            #     reward = generate_reward(preference, self.num_candidates)
-            #     print("reward ", reward)
-
-            #     top_cand = json.loads(ballet)[0]
-            #     # borda_score = list(dict(sorted(reward.items(), key=lambda item: item[1], reverse=True)).keys())
-            #     borda_score = self.num_candidates - 1 - winning_ballot.index(top_cand)
-            #     ballet_to_borda_map[ballet] = borda_score
-
-            # best_ballet = json.loads(list(dict(sorted(ballet_to_borda_map.items(), key=lambda item: item[1], reverse=True)).keys())[0])
-            # print("best_ballet", best_ballet)
-
-
-            # print(voter_ballet_dict["reward"])
-            best_ballet = json.loads(list(dict(sorted(voter_ballet_dict["reward"].items(), key=lambda item: item[1], reverse=True)).keys())[0])
-            print("best_ballet ", best_ballet)
+            # in the initial stages when all candidates have a reward of zero randomly pick one candidate
+            max_reward = max(voter_ballet_dict["reward"].values())
+            # if more than one candidate have highest rewards then choose one randomly
+            top_cand_list = list(filter(lambda x: voter_ballet_dict["reward"][x] == max_reward, voter_ballet_dict["reward"]))
+            top_candidate = random.choice(top_cand_list)
+            print("top_candidate ", top_candidate)
 
             self.exploit += 1
-            return best_ballet[0], best_ballet
+            return top_candidate
         else:   # return the top candidate based on random voting profile
             self.explore += 1
-
-            # ballet_to_borda_map = {}    # dictionary of ballet and corresponding borda score
-            # for ballet in voter_ballet_dict["ballet"]:
-            #     preference = copy(voter_preferences)
-            #     if ballet in voter_preferences:
-            #         preference[ballet] += 1
-            #     else:
-            #         preference[ballet] = 1
-
-            #     reward = generate_reward(preference, self.num_candidates)
-            #     print("reward ", reward)
-
-            #     top_cand = json.loads(ballet)[0]
-            #     # winning_ballot = list(dict(sorted(reward.items(), key=lambda item: item[1], reverse=True)).keys())
-            #     borda_score = self.num_candidates - 1 - winning_ballot.index(top_cand)
-            #     ballet_to_borda_map[ballet] = borda_score
-
-            # best_ballet = json.loads(list(dict(sorted(ballet_to_borda_map.items(), key=lambda item: item[1], reverse=True)).keys())[0])
-            # print("best_ballet", best_ballet)
-
-            best_ballet = random.sample(range(self.num_candidates), k = self.num_candidates)
-            return best_ballet[0], best_ballet
+            # best_ballet = random.sample(range(self.num_candidates), k = self.num_candidates)
+            top_candidate = random.randint(0, self.num_candidates - 1)
+            return top_candidate
 
 
     # pick arms based on the given exploration method
-    def pick_arm(self, algo, curr_borda_scores, voter, voter_ballet_dict, voter_preferences, winning_ballot):
+    def pick_arm(self, algo, curr_borda_scores, voter, voter_ballet_dict):
         if algo == 1:                                               #for epsilon greedy
-            return self.epsilon_greedy_voting(curr_borda_scores, voter, voter_ballet_dict, voter_preferences, winning_ballot)
+            return self.epsilon_greedy_voting(curr_borda_scores, voter, voter_ballet_dict)
 
 
     # update the mean_reward - calculate the average borda scores of candidates over time

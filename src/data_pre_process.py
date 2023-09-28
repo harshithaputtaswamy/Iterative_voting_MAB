@@ -10,7 +10,7 @@ def process_soc_data(generate_data, input_data_file = "", output_data_file = "")
     instance = OrdinalInstance()
 
     if generate_data:
-        instance.populate_IC(20, 3)
+        instance.populate_IC(10, 3)
     else:
         instance.parse_file(input_data_file)
 
@@ -25,7 +25,7 @@ def process_soc_data(generate_data, input_data_file = "", output_data_file = "")
         voting_dict[json.dumps(res[0])] = res[1]
 
     res_dict["flattened_voting_profile"] = voting_dict
-    # res_dict["full_voting_profile"] = [json.loads(key) for key, value in voting_dict.items() for _ in range(value)]
+    res_dict["full_voting_profile"] = [json.loads(key) for key, value in voting_dict.items() for _ in range(value)]
     res_dict["borda_scores"] = borda_scores(instance)
 
     with open(output_data_file, "w") as outfile:
