@@ -5,8 +5,12 @@ from copy import copy
 from model import model
 from utils import generate_reward
 
+
 data_file = open("parsed_soc_data.json")
 parsed_soc_data = json.load(data_file)
+
+# data_file = open("sanity_test_data.json")
+# parsed_soc_data = json.load(data_file)["test2"]
 
 # train the model for given number of iterations and given training algo
 def train(iterations, algo, epsilon):
@@ -15,7 +19,7 @@ def train(iterations, algo, epsilon):
     num_voters = parsed_soc_data["num_voters"]
 
     # get the winning ballet from the borda scores of candidates
-    winning_ballot = [int(i) for i in list(dict(sorted(actual_mean.items(), reverse=True)).keys())]
+    winning_ballot = [int(i) for i in list(dict(sorted(actual_mean.items(), key=lambda item: item[1], reverse=True)).keys())]
     print("winning_ballot ", winning_ballot)
 
     # full_voting_profile = parsed_soc_data["full_voting_profile"]
@@ -34,12 +38,14 @@ def train(iterations, algo, epsilon):
     # append all votes to list, create a list of dictionary for all voters having votes of each voting round
     voter_ballet_dict = {}      # dictionary containing each voter ballet list throughout the iterations
     for voter in range(num_voters):
+        final_voter_preferences = {}
         voter_ballet_dict[voter] = {}
         voter_ballet_dict[voter]["ballet"] = {}
         voter_ballet_dict[voter]["reward"] = {}
         for ballet in list(itertools.permutations(range(num_candidates))):
             voter_ballet_dict[voter]["ballet"][json.dumps(ballet)] = 0
             voter_ballet_dict[voter]["reward"][json.dumps(ballet)] = 0
+            final_voter_preferences[json.dumps(ballet)] = 0
 
     for iter in tqdm(range(iterations)):
         # create a dictionary to hold the ballet order and its multiplicity
@@ -69,27 +75,34 @@ def train(iterations, algo, epsilon):
             # print("voter_ballet ", voter_ballet)
             # reward = generate_reward(voter_preferences, num_candidates)
 
-        # reward = generate_reward(voter_preferences, num_candidates)
-        # print("reward ", reward)
+        reward = generate_reward(voter_preferences, num_candidates)
+        print("iter reward ", reward)
 
         # update the reward of voters
         for voter, ballet in voter_ballet_iter.items():
-            top_cand = json.loads(ballet)[0]
+            top_cand = json.loads(ballet)[0] # 0>1>2 0      2>1>0
             voter_borda_score = num_candidates - 1 - winning_ballot.index(top_cand)
 
             # calculate the reward for each voter for a given voting ballet based on the borda scores at the end of each iteration
             voter_ballet_dict[voter]["reward"][ballet] = (voter_ballet_dict[voter]["reward"][ballet] + voter_borda_score) / voter_ballet_dict[voter]["ballet"][ballet]
             print('voter_ballet_dict[voter]["reward"][ballet] - ', voter_ballet_dict[voter]["reward"])
          
-        # update the mean after every voting cycle is done
-        agent.update_mean(reward)
+        # # update the mean after every voting cycle is done
+        # agent.update_mean(reward)
+        print("exploit explore ", agent.exploit, agent.explore)
 
+    # calculating borda score for voter prefernce generated in last iteration
     borda_scores = generate_reward(voter_preferences, num_candidates)
-    print("borda_scores ", borda_scores)
-    print("exploit explore ", agent.exploit, agent.explore)
+    print("final borda_scores ", dict(sorted(borda_scores.items(), key=lambda item: item[1], reverse=True)))
+
+    # get the final prefernces of voters
+    for voter in range(num_voters):
+        final_voter_preferences[list(dict(sorted(voter_ballet_dict[voter]["reward"].items(), key=lambda item: item[1], reverse=True)).keys())[0]] += 1
+
+    print("final_voter_preferences ", final_voter_preferences)
 
 
-train(1500, 1, 0.5)
+train(1000, 1, 0.3)
 
 
 # at the end of each iteration calcualte the borda score for each voter - the reward for the each voter will be the comaprison of the borda score calculated at the end and his preference

@@ -10,7 +10,7 @@ def process_soc_data(generate_data, input_data_file = "", output_data_file = "")
     instance = OrdinalInstance()
 
     if generate_data:
-        instance.populate_IC(10, 3)
+        instance.populate_IC(20, 3)
     else:
         instance.parse_file(input_data_file)
 

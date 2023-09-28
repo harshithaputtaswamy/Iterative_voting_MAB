@@ -35,16 +35,16 @@ class model():
             #     print("reward ", reward)
 
             #     top_cand = json.loads(ballet)[0]
-            #     # borda_score = list(dict(sorted(reward.items())).keys())
+            #     # borda_score = list(dict(sorted(reward.items(), key=lambda item: item[1], reverse=True)).keys())
             #     borda_score = self.num_candidates - 1 - winning_ballot.index(top_cand)
             #     ballet_to_borda_map[ballet] = borda_score
 
-            # best_ballet = json.loads(list(dict(sorted(ballet_to_borda_map.items(), reverse=True)).keys())[0])
+            # best_ballet = json.loads(list(dict(sorted(ballet_to_borda_map.items(), key=lambda item: item[1], reverse=True)).keys())[0])
             # print("best_ballet", best_ballet)
 
 
             # print(voter_ballet_dict["reward"])
-            best_ballet = json.loads(list(dict(sorted(voter_ballet_dict["reward"].items())).keys())[0])
+            best_ballet = json.loads(list(dict(sorted(voter_ballet_dict["reward"].items(), key=lambda item: item[1], reverse=True)).keys())[0])
             print("best_ballet ", best_ballet)
 
             self.exploit += 1
@@ -64,11 +64,11 @@ class model():
             #     print("reward ", reward)
 
             #     top_cand = json.loads(ballet)[0]
-            #     # winning_ballot = list(dict(sorted(reward.items())).keys())
+            #     # winning_ballot = list(dict(sorted(reward.items(), key=lambda item: item[1], reverse=True)).keys())
             #     borda_score = self.num_candidates - 1 - winning_ballot.index(top_cand)
             #     ballet_to_borda_map[ballet] = borda_score
 
-            # best_ballet = json.loads(list(dict(sorted(ballet_to_borda_map.items(), reverse=True)).keys())[0])
+            # best_ballet = json.loads(list(dict(sorted(ballet_to_borda_map.items(), key=lambda item: item[1], reverse=True)).keys())[0])
             # print("best_ballet", best_ballet)
 
             best_ballet = random.sample(range(self.num_candidates), k = self.num_candidates)
