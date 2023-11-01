@@ -15,7 +15,6 @@ class model():
         self.count = 0
         self.exploit = 0
         self.explore = 0
-        
 
 
     # implement epsilon greedy method to return the top candidate of the voter and the submitted voter preference
@@ -27,7 +26,7 @@ class model():
             # if more than one candidate have highest rewards then choose one randomly
             top_cand_list = list(filter(lambda x: voter_ballet_dict["reward"][x] == max_reward, voter_ballet_dict["reward"]))
             top_candidate = random.choice(top_cand_list)
-            print("top_candidate ", top_candidate)
+            # print("top_candidate ", top_candidate)
 
             self.exploit += 1
             return top_candidate
