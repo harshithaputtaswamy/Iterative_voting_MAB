@@ -1,0 +1,22 @@
+{
+    "test_1": {
+        "epsilon": 0.5,
+        "single_iterative_voting": 1,
+        "grad_epsilon": 0
+    },
+    "test_2": {
+        "epsilon": 0.5,
+        "single_iterative_voting": 0,
+        "grad_epsilon": 0
+    },
+    "test_3": {
+        "epsilon": 0.85,
+        "single_iterative_voting": 1,
+        "grad_epsilon": 1
+    },
+    "test_4": {
+        "epsilon": 0.85,
+        "single_iterative_voting": 0,
+        "grad_epsilon": 1
+    }
+}
