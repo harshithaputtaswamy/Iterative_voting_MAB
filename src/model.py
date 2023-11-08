@@ -18,26 +18,16 @@ class model():
 
 
     # implement epsilon greedy method to return the top candidate of the voter and the submitted voter preference
-    def epsilon_greedy_voting(self, curr_borda_scores, voter, voter_ballet_dict, grad_epsilon):
+    def epsilon_greedy_voting(self, curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, grad_epsilon_const):
         if grad_epsilon:
-            self.epsilon = self.epsilon*0.99
-        if np.random.random() > self.epsilon:   # expliotation
+            self.epsilon = self.epsilon * grad_epsilon_const
 
-            # in the initial stages when all candidates have a reward of zero randomly pick one candidate
+        if np.random.random() > self.epsilon:   # expliotation
             max_reward = max(voter_ballet_dict["reward"].values())
             # if more than one candidate have highest rewards then choose one randomly
             top_cand_list = list(filter(lambda x: voter_ballet_dict["reward"][x] == max_reward, voter_ballet_dict["reward"]))
             top_candidate = random.choice(top_cand_list)
             # print("top_candidate ", top_candidate)
-
-
-            # top_candidate = 0
-            # top_borda_score = 0
-            # for cand in range(self.num_candidates):
-            #     borda_score = self.num_candidates - 1 - actual_voter_ballet.index(cand)
-            #     if borda_score > top_borda_score:
-            #         top_candidate = cand
-
             self.exploit += 1
             # print("self.exploit ", self.exploit)
             return top_candidate
@@ -50,9 +40,9 @@ class model():
 
 
     # pick arms based on the given exploration method
-    def pick_arm(self, algo, curr_borda_scores, voter, voter_ballet_dict, grad_epsilon):
+    def pick_arm(self, algo, curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, grad_epsilon_const):
         if algo == 1:                                               #for epsilon greedy
-            return self.epsilon_greedy_voting(curr_borda_scores, voter, voter_ballet_dict, grad_epsilon)
+            return self.epsilon_greedy_voting(curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, grad_epsilon_const)
 
 
     # update the mean_reward - calculate the average borda scores of candidates over time

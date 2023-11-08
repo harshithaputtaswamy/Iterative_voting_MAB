@@ -1,20 +1,10 @@
 import json
 import random
-import itertools
-from tqdm import tqdm
-from copy import copy
 from model import model
-from utils import generate_reward
 
-
-# data_file = open("parsed_soc_data.json")
-# parsed_soc_data = json.load(data_file)
-
-# data_file = open("sanity_test_data.json")
-# parsed_soc_data = json.load(data_file)["test2"]
 
 # train the model for given number of iterations and given training algo
-def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_voting, grad_epsilon):
+def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_voting, grad_epsilon, grad_epsilon_const):
     actual_mean = parsed_soc_data["borda_scores"]   #the actual borda score of each candidate
     num_candidates = parsed_soc_data["num_candidates"]
     num_voters = parsed_soc_data["num_voters"]
@@ -46,9 +36,6 @@ def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_vo
 
     agent = model(epsilon, num_candidates, num_voters)
 
-    # print("Actual mean ", actual_mean)
-    # print("before running mean = ", agent.mean_reward)
-
     # append all votes to list, create a list of dictionary for all voters having votes of each voting round
     voter_ballet_dict = {}      # dictionary containing each voter ballet list throughout the iterations
 
@@ -72,13 +59,13 @@ def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_vo
         if not single_iterative_voting:
             # run one voting cycle where all the voters cast their vote using pick_arm method and give the their top candidate
             for voter in range(num_voters):
-                top_candidate = agent.pick_arm(algo, reward, voter, voter_ballet_dict[voter], grad_epsilon)
+                top_candidate = agent.pick_arm(algo, reward, voter, voter_ballet_dict[voter], grad_epsilon, grad_epsilon_const)
                 voter_top_cand_iter[voter] = top_candidate
                 voter_ballet_dict[voter]["count"][top_candidate] += 1
         else:
             # In each iteration pick one voter randomly and they will use the pick arm method to vote
             manupilating_voter = random.choice([i for i in range(num_voters)])
-            top_candidate = agent.pick_arm(algo, reward, manupilating_voter, voter_ballet_dict[manupilating_voter], grad_epsilon)
+            top_candidate = agent.pick_arm(algo, reward, manupilating_voter, voter_ballet_dict[manupilating_voter], grad_epsilon, grad_epsilon_const)
             voter_top_cand_iter[manupilating_voter] = top_candidate
             voter_ballet_dict[manupilating_voter]["count"][top_candidate] += 1
 
@@ -105,6 +92,7 @@ def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_vo
             voter_ballet_dict[voter]["reward"][top_cand] = (voter_ballet_dict[voter]["reward"][top_cand] + borda_score)
 
         if iter % batch == 0:
+            # print(agent.epsilon)
             # get the list of winning candidates, if there are more than two winning candidates chooce one randomly (tie breaking)
             highest_vote = max(candidate_votes.values())
             winning_candidate_list = list(filter(lambda x: candidate_votes[x] == highest_vote, candidate_votes))
@@ -122,97 +110,7 @@ def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_vo
 
         # print("winner profile ", candidate_votes)
 
-        # get the list of winning candidates, if there are more than two winning candidates chooce one randomly (tie breaking)
-        # highest_vote = max(candidate_votes.values())
-        # winning_candidate_list = list(filter(lambda x: candidate_votes[x] == highest_vote, candidate_votes))
-        # winning_candidate = random.choice(winning_candidate_list)
-
-        # if iter % batch == 0:
-        #     print("candidate_votes ", candidate_votes)
-        #     print("borda scores of voters dictionary ", voter_ballet_dict)
-
-        #     # create a preference profile based on the rewards the voters got in last round
-        #     # generated_preference_profile = {}
-        #     # for voter in range(num_voters):
-        #     #     generated_preference_profile[voter] = sorted(voter_ballet_dict[voter]["reward"], key=voter_ballet_dict[voter]["reward"].get, reverse=True)
-            
-        #     # print("generated_preference_profile ", generated_preference_profile)
-        
-            
-        #     winning_borda_score = 0
-        #     for voter in range(num_voters):
-        #         actual_voter_ballet = full_voting_profile[voter]
-        #         borda_score = num_candidates - 1 - actual_voter_ballet.index(winning_candidate)
-        #         winning_borda_score += borda_score
-            
-        #     borda_scores_arr.append(winning_borda_score)
-        #     print("winning_candidate ", winning_borda_score)
-        #     print("final_round_reward_cand ", borda_scores_arr)
-
-
-
-        # for voter in range(num_voters):
-        #     actual_voter_ballet = full_voting_profile[voter]
-        #     borda_score = num_candidates - 1 - actual_voter_ballet.index(winning_candidate)
-        #     voter_ballet_dict[voter]["reward"][voter_top_cand_iter[voter]] += (borda_score / voter_ballet_dict[voter]["count"][cand])
-    
-        # print("exploit explore ", agent.exploit, agent.explore)
-
-    # final_round_candidate_votes = {}    # dictionary of candidate and number voters chose them in final round
-    # for voter in range(num_voters):
-    #     final_round_winner = max(voter_ballet_dict[voter]["reward"], key = voter_ballet_dict[voter]["reward"].get)
-    #     if final_round_winner in final_round_candidate_votes:
-    #         final_round_candidate_votes[final_round_winner] += 1
-    #     else:
-    #         final_round_candidate_votes[final_round_winner] = 1
-    #     # print("voter {} - final_round_winner {}".format(voter, final_round_winner))
-
-    # generated_borda_score_dict = {}
-    # for cand in range(num_candidates):
-    #     winning_borda_score = 0
-    #     for voter in range(num_voters):
-    #         generated_voter_ballet = generated_preference_profile[voter]
-    #         borda_score = num_candidates - 1 - generated_voter_ballet.index(cand)
-    #         winning_borda_score += borda_score
-    #     generated_borda_score_dict[cand] = winning_borda_score
-
-    # final_round_reward_cand = {}
-    # for cand in range(num_candidates):
-    #     final_round_reward_cand[cand] = 0
-
-    # for cand in range(num_candidates):
-    #     score = 0
-    #     for voter in range(num_voters):
-    #         score += voter_ballet_dict[voter]["reward"][cand]
-    #     final_round_reward_cand[cand] = score/iter
-
     return borda_scores_arr
-    
-    # get the average borda score of the winning candidates from all voters
-    winning_borda_score_dict = {}    # contains voter and there top candidates avg borda acore
-    # for voter in range(num_voters):
-    #     winning_borda_score_dict[voter] = 0
-
-    for voter in range(num_voters):
-        # if voter in winning_borda_score_dict:
-        winning_borda_score_dict[voter] = voter_ballet_dict[voter]["reward"][voter_top_candidates[voter]]
-
-    # winning_borda_score_dict = voter_ballet_dict[voter]["reward"][actual_winning_candidate]
-
-    # winning_borda_score_dict /= num_voters
-    # print("winning_borda_score_dict: ", winning_borda_score_dict)
-    
-    return winning_borda_score_dict
 
 
 # train(10000, 1, 0.5, parsed_soc_data)
-
-
-# at the end of each iteration calcualte the borda score for each voter - the reward for the each voter will be the comaprison of the borda score calculated at the end and his preference
-# sanity check - where all voters preferences are same
-# 4 - 1 > 2, 3
-# 3 - 3, 2, 1
-# 3 - 2, 3,1 
-
-
-#TODO: write sudo code

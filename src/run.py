@@ -51,18 +51,20 @@ actual_winning_candidate = random.choice(actual_winning_candidate_list)
 input_file = open("config.json")
 input_conf = json.load(input_file)
 
+result = {}
+output_file = open("results.json")
+result = json.load(output_file)
+
 avg_runs = 1000
 iterations = 10000
 batch = 50
-
-result = {}
 
 for key in input_conf.keys():
     result[key] = {}
     avg_borda_score_arr = []
     borda_scores_arr = []
     for i in range(avg_runs):
-        borda_scores_arr.append(train(iterations, batch, 1, input_conf[key]["epsilon"], parsed_soc_data, input_conf[key]["single_iterative_voting"], input_conf[key]["grad_epsilon"]))   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
+        borda_scores_arr.append(train(iterations, batch, 1, input_conf[key]["epsilon"], parsed_soc_data, input_conf[key]["single_iterative_voting"], input_conf[key]["grad_epsilon"], input_conf[key]["grad_epsilon_const"]))   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
         print(i)
     borda_scores_arr = np.array(borda_scores_arr)
     avg_borda_score_arr = borda_scores_arr.sum(axis=0)
@@ -91,7 +93,7 @@ print("num_iter_arr: ", num_iter_arr)
 # print(borda_score_per_cand)
 
 plot = plt.figure()
-for key in input_conf.keys():
+for key in result.keys():
     plt.plot(num_iter_arr, result[key]["avg_borda_score_arr"], label=key)
 # plt.plot(num_iter_arr, [actual_winning_borda_score_dict[0]]*len(num_iter_arr), "r--")
 # plt.plot(num_iter_arr, borda_score_per_cand[1], "g", label="candidate 1")
