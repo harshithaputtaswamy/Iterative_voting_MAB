@@ -9,11 +9,11 @@ num_iter_arr = []
 # import matplotlib
 # matplotlib.use("QtAgg")
 
-data_file = open("parsed_soc_data.json")
-parsed_soc_data = json.load(data_file)
+# data_file = open("parsed_soc_data.json")
+# parsed_soc_data = json.load(data_file)
 
-# data_file = open("sanity_test_data.json")
-# parsed_soc_data = json.load(data_file)["test2"]
+data_file = open("sanity_test_data.json")
+parsed_soc_data = json.load(data_file)["test2"]
 
 num_voters = parsed_soc_data["num_voters"]
 num_candidates = parsed_soc_data["num_candidates"]
@@ -56,8 +56,8 @@ result = {}
 output_file = open("results.json")
 result = json.load(output_file)
 
-avg_runs = 1000
-iterations = 10000
+avg_runs = 10
+iterations = 20000
 batch = 50
 
 for key in input_conf.keys():
@@ -65,7 +65,8 @@ for key in input_conf.keys():
     avg_borda_score_arr = []
     borda_scores_arr = []
     for i in tqdm(range(avg_runs)):
-        borda_scores_arr.append(train(iterations, batch, 1, input_conf[key]["epsilon"], parsed_soc_data, input_conf[key]["single_iterative_voting"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"]))   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
+        train = train_model(iterations, batch, parsed_soc_data, input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"])   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
+        borda_scores_arr.append(train.train(1, input_conf[key]["single_iterative_voting"]))
         # print(i)
     borda_scores_arr = np.array(borda_scores_arr)
     avg_borda_score_arr = borda_scores_arr.sum(axis=0)

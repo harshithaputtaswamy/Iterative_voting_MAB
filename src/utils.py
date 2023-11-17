@@ -1,6 +1,6 @@
 import json
 
-def generate_reward(curr_voting_profile, num_alternatives):
+def get_borda_score(curr_voting_profile, num_alternatives):
 	# Computes the borda score for the votings casted until now
 
 	res = dict([])
