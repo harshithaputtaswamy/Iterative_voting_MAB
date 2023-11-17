@@ -5,6 +5,8 @@ from tqdm import tqdm
 from copy import copy
 from utils import generate_reward
 
+# epsilon_decay = (1 - 0.1) / 10000
+
 
 class model():
     def __init__(self, epsilon, num_candidates, num_voters):
@@ -17,10 +19,10 @@ class model():
         self.explore = 0
 
 
+
+
     # implement epsilon greedy method to return the top candidate of the voter and the submitted voter preference
-    def epsilon_greedy_voting(self, curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, grad_epsilon_const):
-        if grad_epsilon:
-            self.epsilon = self.epsilon * grad_epsilon_const
+    def epsilon_greedy_voting(self, curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, epsilon_final, epsilon_decay):
 
         if np.random.random() > self.epsilon:   # expliotation
             max_reward = max(voter_ballet_dict["reward"].values())
@@ -30,19 +32,26 @@ class model():
             # print("top_candidate ", top_candidate)
             self.exploit += 1
             # print("self.exploit ", self.exploit)
-            return top_candidate
         else:   # return the top candidate based on random voting profile
             self.explore += 1
             # best_ballet = random.sample(range(self.num_candidates), k = self.num_candidates)
             top_candidate = random.randint(0, self.num_candidates - 1)
             # print("self.explore ", self.explore)
-            return top_candidate
+
+        if grad_epsilon:
+            # Calculate the epsilon decrement per iteration
+            self.epsilon = self.epsilon * epsilon_decay
+            # self.epsilon = max(epsilon_final, self.epsilon * epsilon_decay)
+            # self.epsilon = max(epsilon_final, self.epsilon - epsilon_decay)
+
+
+        return top_candidate
 
 
     # pick arms based on the given exploration method
-    def pick_arm(self, algo, curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, grad_epsilon_const):
+    def pick_arm(self, algo, curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, epsilon_final, epsilon_decay):
         if algo == 1:                                               #for epsilon greedy
-            return self.epsilon_greedy_voting(curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, grad_epsilon_const)
+            return self.epsilon_greedy_voting(curr_borda_scores, voter, voter_ballet_dict, grad_epsilon, epsilon_final, epsilon_decay)
 
 
     # update the mean_reward - calculate the average borda scores of candidates over time

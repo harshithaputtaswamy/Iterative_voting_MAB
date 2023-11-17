@@ -1,6 +1,7 @@
 from train import *
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 borda_scores_arr = []
 num_iter_arr = []
 
@@ -63,9 +64,9 @@ for key in input_conf.keys():
     result[key] = {}
     avg_borda_score_arr = []
     borda_scores_arr = []
-    for i in range(avg_runs):
-        borda_scores_arr.append(train(iterations, batch, 1, input_conf[key]["epsilon"], parsed_soc_data, input_conf[key]["single_iterative_voting"], input_conf[key]["grad_epsilon"], input_conf[key]["grad_epsilon_const"]))   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
-        print(i)
+    for i in tqdm(range(avg_runs)):
+        borda_scores_arr.append(train(iterations, batch, 1, input_conf[key]["epsilon"], parsed_soc_data, input_conf[key]["single_iterative_voting"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"]))   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
+        # print(i)
     borda_scores_arr = np.array(borda_scores_arr)
     avg_borda_score_arr = borda_scores_arr.sum(axis=0)
     avg_borda_score_arr = avg_borda_score_arr/avg_runs
@@ -76,8 +77,8 @@ with open("results.json", "w") as f:
 
 num_iter_arr = [i for i in range(50, iterations + 1, batch)]
 
-print("avg_borda_score_arr: ", avg_borda_score_arr)
-print("num_iter_arr: ", num_iter_arr)
+# print("avg_borda_score_arr: ", avg_borda_score_arr)
+# print("num_iter_arr: ", num_iter_arr)
 
 
 

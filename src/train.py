@@ -1,10 +1,11 @@
 import json
 import random
+import numpy as np
 from model import model
 
 
 # train the model for given number of iterations and given training algo
-def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_voting, grad_epsilon, grad_epsilon_const):
+def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_voting, grad_epsilon, epsilon_final, epsilon_decay):
     actual_mean = parsed_soc_data["borda_scores"]   #the actual borda score of each candidate
     num_candidates = parsed_soc_data["num_candidates"]
     num_voters = parsed_soc_data["num_voters"]
@@ -12,6 +13,7 @@ def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_vo
     flattened_voting_profile = parsed_soc_data["flattened_voting_profile"]
 
     borda_scores_arr = []   # list of borda scores at given n iterations
+    # epsilon_decay = np.power(epsilon_final / epsilon, 1.0 / iterations)
 
 
     full_voting_profile = []
@@ -47,7 +49,7 @@ def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_vo
             voter_ballet_dict[voter]["reward"][cand] = 0
             voter_ballet_dict[voter]["count"][cand] = 0
 
-    voter_top_cand_iter = {}        # dictionary containing voter and their corresponding top candidate
+    voter_ballet_iter = {}        # dictionary containing voter and their corresponding top candidate
     
     n_iter_reward = {}
     for voter in range(num_voters):
@@ -59,26 +61,27 @@ def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_vo
         if not single_iterative_voting:
             # run one voting cycle where all the voters cast their vote using pick_arm method and give the their top candidate
             for voter in range(num_voters):
-                top_candidate = agent.pick_arm(algo, reward, voter, voter_ballet_dict[voter], grad_epsilon, grad_epsilon_const)
-                voter_top_cand_iter[voter] = top_candidate
+                top_candidate = agent.pick_arm(algo, reward, voter, voter_ballet_dict[voter], grad_epsilon, epsilon_final, epsilon_decay)
+                voter_ballet_iter[voter] = top_candidate
                 voter_ballet_dict[voter]["count"][top_candidate] += 1
         else:
             # In each iteration pick one voter randomly and they will use the pick arm method to vote
             manupilating_voter = random.choice([i for i in range(num_voters)])
-            top_candidate = agent.pick_arm(algo, reward, manupilating_voter, voter_ballet_dict[manupilating_voter], grad_epsilon, grad_epsilon_const)
-            voter_top_cand_iter[manupilating_voter] = top_candidate
+            top_candidate = agent.pick_arm(algo, reward, manupilating_voter, voter_ballet_dict[manupilating_voter], grad_epsilon, epsilon_final, epsilon_decay)
+            voter_ballet_iter[manupilating_voter] = top_candidate
             voter_ballet_dict[manupilating_voter]["count"][top_candidate] += 1
 
             voter_list = [i for i in range(num_voters)]
             voter_list.remove(manupilating_voter)
             for voter in voter_list:
                 cand = full_voting_profile[voter][0]  # initialy asign this dictionary with true preferences of voters
-                voter_top_cand_iter[voter] = cand
+                voter_ballet_iter[voter] = cand
                 voter_ballet_dict[voter]["count"][cand] += 1
 
+# TODO: compute_winner(), compute_wellfare(), update_reward()
 
         # update the candidate votes dictionary
-        for top_candidate in voter_top_cand_iter.values():
+        for top_candidate in voter_ballet_iter.values():
             if top_candidate in candidate_votes:
                 candidate_votes[top_candidate] += 1
             else:
@@ -87,7 +90,7 @@ def train(iterations, batch, algo, epsilon, parsed_soc_data, single_iterative_vo
         # get the borda score by comapring the winning candidate and the actual voter preference, update the reward for each voter for their voted candidate
         for voter in range(num_voters):
             actual_voter_ballet = full_voting_profile[voter]
-            top_cand = voter_top_cand_iter[voter]
+            top_cand = voter_ballet_iter[voter]
             borda_score = num_candidates - 1 - actual_voter_ballet.index(top_cand)
             voter_ballet_dict[voter]["reward"][top_cand] = (voter_ballet_dict[voter]["reward"][top_cand] + borda_score)
 
