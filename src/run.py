@@ -9,11 +9,11 @@ num_iter_arr = []
 # import matplotlib
 # matplotlib.use("QtAgg")
 
-# data_file = open("parsed_soc_data.json")
-# parsed_soc_data = json.load(data_file)
+data_file = open("parsed_soc_data.json")
+parsed_soc_data = json.load(data_file)
 
-data_file = open("sanity_test_data.json")
-parsed_soc_data = json.load(data_file)["test2"]
+# data_file = open("sanity_test_data.json")
+# parsed_soc_data = json.load(data_file)["test1"]
 
 num_voters = parsed_soc_data["num_voters"]
 num_candidates = parsed_soc_data["num_candidates"]
@@ -52,13 +52,17 @@ actual_winning_candidate = random.choice(actual_winning_candidate_list)
 input_file = open("config.json")
 input_conf = json.load(input_file)
 
+avg_runs = 500
+iterations = 15000
+batch = 50
+
 result = {}
 output_file = open("results.json")
 result = json.load(output_file)
 
-avg_runs = 10
-iterations = 20000
-batch = 50
+result["test_0"] = {}
+result["test_0"]["avg_borda_score_arr"] = [actual_highest_vote]*int(iterations / batch)
+
 
 for key in input_conf.keys():
     result[key] = {}
@@ -71,6 +75,7 @@ for key in input_conf.keys():
     borda_scores_arr = np.array(borda_scores_arr)
     avg_borda_score_arr = borda_scores_arr.sum(axis=0)
     avg_borda_score_arr = avg_borda_score_arr/avg_runs
+    print(np.shape(avg_borda_score_arr))
     result[key]["avg_borda_score_arr"] = avg_borda_score_arr.tolist()
 
 with open("results.json", "w") as f:

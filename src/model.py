@@ -36,6 +36,7 @@ class model():
                 ballot_options = list(permutations(ballot_options))
 
             self.explore += 1
+            # print("ballot_options", ballot_options)
             top_ballot = random.choice(ballot_options)
             # print("top_ballot expllore", top_ballot)
             # print("self.explore ", self.explore)
