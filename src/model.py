@@ -1,6 +1,6 @@
 import random
 import numpy as np
-from itertools import permutations
+from itertools import permutations, combinations
 
 # epsilon_decay = (1 - 0.1) / 10000
 
@@ -19,25 +19,42 @@ class model():
 
 
     # implement epsilon greedy method to return the top ballot of the voter and the submitted voter preference
-    def epsilon_greedy_voting(self, voter_ballet_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay):
+    def epsilon_greedy_voting(self, voter_ballot_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
 
         if np.random.random() > self.epsilon:   # expliotation
-            max_reward = max(voter_ballet_dict["reward"].values())
+            max_reward = max(voter_ballot_dict["reward"].values())
             # if more than one ballot have highest rewards then choose one randomly
-            top_ballot_list = list(filter(lambda x: voter_ballet_dict["reward"][x] == max_reward, voter_ballet_dict["reward"]))
+            top_ballot_list = list(filter(lambda x: voter_ballot_dict["reward"][x] == max_reward, voter_ballot_dict["reward"]))
             top_ballot = random.choice(top_ballot_list)
+
+            # if voting_rule == 'approval':
+            #     top_ballot = [0]*self.num_candidates
+            #     highest_rewarding_cands = sorted(voter_ballot_dict["reward"], key=voter_ballot_dict["reward"].get, reverse=True)[: approval_count]
+            #     for cand in highest_rewarding_cands:
+            #         top_ballot[cand] = 1    # returns an array of 1s and 0s where array index is the candidate
+
             # print("top_ballot exploit", top_ballot)
             self.exploit += 1
-            # print("self.exploit ", self.exploit)
+            # print("self.exploit ", self.exploit, top_ballot_list)
         else:   # return the top ballot based on random voting profile
-            ballot_options = list(range(self.num_candidates))
+            top_ballot = random.choice(list(range(self.num_candidates)))
 
             if voting_rule == 'borda':
-                ballot_options = list(permutations(ballot_options))
+                top_ballot = random.choice(list(permutations(top_ballot)))
+            
+            elif voting_rule == 'approval':
+                ones_indices_combinations = random.choice(list(combinations(range(self.num_candidates), approval_count)))
+                top_ballot = [1 if i in ones_indices_combinations else 0 for i in range(self.num_candidates)]
+
+                # top_ballot = [0]*self.num_candidates
+                # for _ in range(approval_count):
+                #     cand = random.choice(range(self.num_candidates))
+                #     print("explore cand", cand)
+                #     top_ballot[cand] = 1
 
             self.explore += 1
             # print("ballot_options", ballot_options)
-            top_ballot = random.choice(ballot_options)
+            # top_ballot = random.choice(ballot_options)
             # print("top_ballot expllore", top_ballot)
             # print("self.explore ", self.explore)
 
@@ -52,9 +69,9 @@ class model():
 
 
     # pick arms based on the given exploration method
-    def pick_arm(self, explore_criteria, voter_ballet_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay):
+    def pick_arm(self, explore_criteria, voter_ballot_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
         if explore_criteria == 1:                                               #for epsilon greedy
-            return self.epsilon_greedy_voting(voter_ballet_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay)
+            return self.epsilon_greedy_voting(voter_ballot_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay, approval_count)
 
 
     # update the mean_reward - calculate the average borda scores of candidates over time
