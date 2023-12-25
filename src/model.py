@@ -16,8 +16,6 @@ class model():
         self.explore = 0
 
 
-
-
     # implement epsilon greedy method to return the top ballot of the voter and the submitted voter preference
     def epsilon_greedy_voting(self, voter_ballot_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
 
@@ -58,12 +56,13 @@ class model():
             # print("top_ballot expllore", top_ballot)
             # print("self.explore ", self.explore)
 
-        if grad_epsilon:
+        if grad_epsilon and self.epsilon >= epsilon_final:
             # Calculate the epsilon decrement per iteration
             self.epsilon = self.epsilon * epsilon_decay
             # self.epsilon = max(epsilon_final, self.epsilon * epsilon_decay)
             # self.epsilon = max(epsilon_final, self.epsilon - epsilon_decay)
 
+        # print("self.exploit ", self.exploit, " self.explore ", self.explore)
 
         return top_ballot
 

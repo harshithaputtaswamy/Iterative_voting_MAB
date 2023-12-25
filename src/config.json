@@ -21,45 +21,24 @@
         "epsilon_decay": 0
     },
     "test_4": {
-        "epsilon": 0.65,
-        "single_iterative_voting": 0,
-        "grad_epsilon": 0,
-        "epsilon_final": 0.1,
-        "epsilon_decay": 0
-    },
-    "test_5": {
         "epsilon": 0.75,
         "single_iterative_voting": 0,
         "grad_epsilon": 0,
         "epsilon_final": 0.1,
         "epsilon_decay": 0
     },
-    "test_6": {
-        "epsilon": 0.85,
-        "single_iterative_voting": 0,
-        "grad_epsilon": 0,
-        "epsilon_final": 0.1,
-        "epsilon_decay": 0
-    },
-    "test_7": {
-        "epsilon": 0.45,
-        "single_iterative_voting": 0,
-        "grad_epsilon": 0,
-        "epsilon_final": 0.1,
-        "epsilon_decay": 0
-    },
-    "test_8": {
-        "epsilon": 0.35,
-        "single_iterative_voting": 0,
-        "grad_epsilon": 0,
-        "epsilon_final": 0.1,
-        "epsilon_decay": 0
-    },
-    "test_9": {
+    "test_5": {
         "epsilon": 0.99,
         "single_iterative_voting": 0,
         "grad_epsilon": 1,
         "epsilon_final": 0.1,
         "epsilon_decay": 0.99995
+    },
+    "test_6": {
+        "epsilon": 0.99,
+        "single_iterative_voting": 0,
+        "grad_epsilon": 1,
+        "epsilon_final": 0.45,
+        "epsilon_decay": 0.99
     }
 }

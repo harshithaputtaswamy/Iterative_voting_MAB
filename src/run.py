@@ -9,26 +9,23 @@ num_iter_arr = []
 # import matplotlib
 # matplotlib.use("QtAgg")
 
-# data_file = open("parsed_soc_data.json")
-# parsed_soc_data = json.load(data_file)
+data_file = open("parsed_soc_data.json")
+parsed_soc_data = json.load(data_file)
 
-data_file = open("sanity_test_data.json")
-parsed_soc_data = json.load(data_file)["test1"]
+# data_file = open("sanity_test_data.json")
+# parsed_soc_data = json.load(data_file)["test1"]
 
 num_voters = parsed_soc_data["num_voters"]
 num_candidates = parsed_soc_data["num_candidates"]
 flattened_voting_profile = parsed_soc_data["flattened_voting_profile"]
-approval_count = 1
+approval_count_list = range(1, (num_candidates // 2) + 2)    # change here
+print(approval_count_list)
 
 full_voting_profile = []
 for ballet, num in flattened_voting_profile.items():
     for i in range(num):
         full_voting_profile.append(json.loads(ballet))
 parsed_soc_data["full_voting_profile"] = full_voting_profile
-
-actual_winning_score_dict = {}
-for cand in range(num_candidates):
-    actual_winning_score_dict[cand] = 0
 
 # calculate borda score for this all candidate to see who the actual winner would be
 # for cand in range(num_candidates):
@@ -45,23 +42,27 @@ for cand in range(num_candidates):
 # approval_dict = {}
 # for cand in range(num_candidates):
 #     approval_dict[cand] = 0
+    
+actual_highest_vote_per_approval = {}       # dictionary to store hiighest vote for different approval count
 
-for voter in range(num_voters):
-    actual_voter_ballet = full_voting_profile[voter]
-    approval_vector = [0]*num_candidates
-    for cand in actual_voter_ballet[:approval_count]:
-        actual_winning_score_dict[cand] += 1
+actual_winning_score_dict = {}
+for approval_count in approval_count_list:
+    for cand in range(num_candidates):
+        actual_winning_score_dict[cand] = 0
+    for voter in range(num_voters):
+        actual_voter_ballet = full_voting_profile[voter]
+        approval_vector = [0]*num_candidates
+        for cand in actual_voter_ballet[:approval_count]:
+            actual_winning_score_dict[cand] += 1
+    print(actual_winning_score_dict)
+    # actual_winner is the candidate who was chosen by most number voters with tie breaking (randomly chosen)
+    actual_highest_vote_per_approval[approval_count] = max(actual_winning_score_dict.values())
 
-print(actual_winning_score_dict)
 
-# actual_winner is the candidate who was chosen by most number voters with tie breaking (randomly chosen)
-actual_highest_vote = max(actual_winning_score_dict.values())
-
-
-actual_winning_candidate_list = list(filter(lambda x: actual_winning_score_dict[x] == actual_highest_vote, actual_winning_score_dict))
-# print("actual_winning_candidate_list: ", actual_winning_candidate_list)
-actual_winning_candidate = random.choice(actual_winning_candidate_list)
-# print("winner ", actual_winning_candidate)
+    actual_winning_candidate_list = list(filter(lambda x: actual_winning_score_dict[x] == actual_highest_vote_per_approval[approval_count], actual_winning_score_dict))
+    # print("actual_winning_candidate_list: ", actual_winning_candidate_list)
+    actual_winning_candidate = random.choice(actual_winning_candidate_list)
+    # print("winner ", actual_winning_candidate)
 
 # for i in range(50, 500, 50):
 #     avg_borda_score = 0
@@ -72,37 +73,55 @@ input_file = open("config.json")
 input_conf = json.load(input_file)
 
 avg_runs = 10
-iterations = 20000
-batch = 50
+iterations = 100000
+batch = 500
 
+output_file = "results_soc_data.json"
+# result = json.load(output_file)
 result = {}
-output_file = open("results.json")
-result = json.load(output_file)
 
-result["test_0"] = {}
-result["test_0"]["avg_borda_score_arr"] = [actual_highest_vote]*int(iterations / batch)
+for approval_count in approval_count_list:
+    result[approval_count] = {}
+    result[approval_count]["test_0"] = {}
+    result[approval_count]["test_0"]["avg_score_arr"] = [actual_highest_vote_per_approval[approval_count]]*int(iterations / batch)
 
+num_iter_arr = [i for i in range(batch, iterations + 1, batch)]
 
-for key in input_conf.keys():
-    result[key] = {}
-    avg_borda_score_arr = []
-    borda_scores_arr = []
-    for i in tqdm(range(avg_runs)):
-        train = train_model(iterations, batch, parsed_soc_data, input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"])   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
-        borda_scores_arr.append(train.train(1, input_conf[key]["single_iterative_voting"]))
-        # print(i)
-    borda_scores_arr = np.array(borda_scores_arr)
-    avg_borda_score_arr = borda_scores_arr.sum(axis=0)
-    avg_borda_score_arr = avg_borda_score_arr/avg_runs
-    print(np.shape(avg_borda_score_arr))
-    result[key]["avg_borda_score_arr"] = avg_borda_score_arr.tolist()
+for approval_count in approval_count_list:
+    for key in input_conf.keys():
+        # print(key)
+        result[approval_count][key] = {}
+        avg_score_arr = []
+        borda_scores_arr = []
+        for i in tqdm(range(avg_runs)):
+            train = train_model(iterations, batch, parsed_soc_data, approval_count, input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"])   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
+            borda_scores, welfare_dict_list = train.train(1, input_conf[key]["single_iterative_voting"])
+            borda_scores_arr.append(borda_scores)
+        borda_scores_arr = np.array(borda_scores_arr)
+        avg_score_arr = borda_scores_arr.sum(axis=0)
+        avg_score_arr = avg_score_arr/avg_runs
+        # print(avg_score_arr.tolist())
+        result[approval_count][key]["avg_score_arr"] = avg_score_arr.tolist()
+        result[approval_count][key]["welfare_dict_list"] = welfare_dict_list
 
-with open("results.json", "w") as f:
+    plot = plt.figure()
+    for key in result[approval_count].keys():
+        plt.plot(num_iter_arr, result[approval_count][key]["avg_score_arr"], label=key)
+
+    plt.legend(loc='upper right')
+    plt.xlabel("Number of iterations")
+    plt.ylabel("Avg Approval Score")
+    plt.ylim(0, actual_highest_vote_per_approval[approval_count] + 2)
+    plt.show()
+    plt.savefig('results/approval_count_' + str(approval_count) + '_avg_score_soc_data.png')
+
+with open(output_file, "w") as f:
     json.dump(result, f)
+# print(num_iter_arr, len(avg_score_arr))
+# print(np.shape(avg_score_arr))
+# num_iter_arr.pop()
 
-num_iter_arr = [i for i in range(50, iterations + 1, batch)]
-
-# print("avg_borda_score_arr: ", avg_borda_score_arr)
+# print("avg_score_arr: ", avg_score_arr)
 # print("num_iter_arr: ", num_iter_arr)
 
 
@@ -118,17 +137,17 @@ num_iter_arr = [i for i in range(50, iterations + 1, batch)]
 
 # print(borda_score_per_cand)
 
-plot = plt.figure()
-for key in result.keys():
-    plt.plot(num_iter_arr, result[key]["avg_borda_score_arr"], label=key)
-# plt.plot(num_iter_arr, [actual_winning_score_dict[0]]*len(num_iter_arr), "r--")
-# plt.plot(num_iter_arr, borda_score_per_cand[1], "g", label="candidate 1")
-# plt.plot(num_iter_arr, [actual_winning_score_dict[1]]*len(num_iter_arr), "g--")
-# plt.plot(num_iter_arr, borda_score_per_cand[2], "b", label="candidate 2")
-# plt.plot(num_iter_arr, [actual_winning_score_dict[2]]*len(num_iter_arr), "b--")
-plt.legend()
-plt.xlabel("Number of iterations")
-plt.ylabel("Avg Borda score of learning agents (Plurality)")
-plt.ylim(0, actual_highest_vote+5)
-plt.show()
-plt.savefig('res.png')
+# plot = plt.figure()
+# for key in result.keys():
+#     plt.plot(num_iter_arr, result[key]["avg_score_arr"], label=key)
+# # plt.plot(num_iter_arr, [actual_winning_score_dict[0]]*len(num_iter_arr), "r--")
+# # plt.plot(num_iter_arr, borda_score_per_cand[1], "g", label="candidate 1")
+# # plt.plot(num_iter_arr, [actual_winning_score_dict[1]]*len(num_iter_arr), "g--")
+# # plt.plot(num_iter_arr, borda_score_per_cand[2], "b", label="candidate 2")
+# # plt.plot(num_iter_arr, [actual_winning_score_dict[2]]*len(num_iter_arr), "b--")
+# plt.legend()
+# plt.xlabel("Number of iterations")
+# plt.ylabel("Avg Borda score of learning agents (Plurality)")
+# plt.ylim(0, actual_highest_vote+5)
+# plt.show()
+# plt.savefig('res.png')

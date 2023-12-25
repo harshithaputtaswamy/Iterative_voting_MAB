@@ -6,7 +6,7 @@ from itertools import permutations, combinations
 
 
 class train_model():
-    def __init__(self, iterations, batch, parsed_soc_data, epsilon, grad_epsilon, epsilon_final, epsilon_decay):
+    def __init__(self, iterations, batch, parsed_soc_data, approval_count, epsilon, grad_epsilon, epsilon_final, epsilon_decay):
         self.parsed_soc_data = parsed_soc_data
         self.actual_mean = parsed_soc_data["borda_scores"]   #the actual borda score of each candidate
         self.num_candidates = parsed_soc_data["num_candidates"]
@@ -25,8 +25,16 @@ class train_model():
         self.epsilon_decay = epsilon_decay
         # self.voting_rule = 'approval'
         self.voting_rule = 'approval'
-        self.approval_count = 1
-        self.welfare_scoring_vector = [1, 0, 0]
+        self.approval_count = approval_count     # change here
+        self.welfare_scoring_vector = [1] * approval_count + [0] * (self.num_candidates - approval_count)       # change here
+        self.all_approval_combinations = []     # initialise an array of all possible combinations of approvals i.e [1's and 0's]
+        if self.voting_rule == 'approval':
+            # Generate all combinations of indices for 1s
+            ones_indices_combinations = combinations(range(self.num_candidates), approval_count)
+
+            # Generate arrays with 1s and 0s based on the combinations
+            for indices in ones_indices_combinations:
+                self.all_approval_combinations.append([1 if i in indices else 0 for i in range(self.num_candidates)])
         # self.welfare_scoring_vector = list(range(self.num_candidates - 1, -1, -1))
     
 
@@ -152,6 +160,7 @@ class train_model():
     def train(self, explore_criteria, single_iterative_voting):
 
         borda_scores_arr = []   # list of borda scores at given n iterations
+        welfare_dict_list = []  # lst of welfare dictionaries of voters
 
         voter_top_candidates = []
         for voter in range(self.num_voters):
@@ -173,14 +182,9 @@ class train_model():
                     voter_ballot_dict[voter]["count"][cand] = 0
             
             elif self.voting_rule == 'approval':
-                # Generate all combinations of indices for 1s
-                ones_indices_combinations = combinations(range(self.num_candidates), self.approval_count)
-
-                # Generate arrays with 1s and 0s based on the combinations
-                for indices in ones_indices_combinations:
-                    array = [1 if i in indices else 0 for i in range(self.num_candidates)]
-                    voter_ballot_dict[voter]["reward"][tuple(array)] = 0
-                    voter_ballot_dict[voter]["count"][tuple(array)] = 0
+                for comb in self.all_approval_combinations:
+                    voter_ballot_dict[voter]["reward"][tuple(comb)] = 0
+                    voter_ballot_dict[voter]["count"][tuple(comb)] = 0
 
                 # print("init voter_ballot_dict ", voter_ballot_dict)
 
@@ -199,10 +203,28 @@ class train_model():
                 cand = [0]*self.num_candidates
                 for c in self.full_voting_profile[voter_i][ : self.approval_count]:  # true approval vector of voters, first k cands get 1 and rest 0
                     cand[c] = 1
-
+                # print(cand)
             voter_ballot_iter[voter_i] = cand
 
-        for iter in range(self.iterations):
+        # for 0th iteration
+        winning_candidate = self.compute_winner(voter_ballot_iter)
+
+        welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
+        self.update_rewards(voter_ballot_dict, voter_ballot_iter, welfare_dict)
+
+        winning_borda_score = 0
+        for voter in range(self.num_voters):
+            if (voter_ballot_dict[voter]["count"][tuple(voter_ballot_iter[voter])]):
+                winning_borda_score += voter_ballot_dict[voter]["reward"][tuple(voter_ballot_iter[voter])] / voter_ballot_dict[voter]["count"][tuple(voter_ballot_iter[voter])]
+
+        # print("voter_ballot_dict ", voter_ballot_dict)
+        borda_scores_arr.append(winning_borda_score)
+        welfare_dict_list.append(welfare_dict)
+        # print("winning_cansdidate ", winning_candidate)
+        # print("final_round_reward_cand ", borda_scores_arr)
+
+        for iter in range(1, self.iterations):
+            # print(iter)
             if not single_iterative_voting:
                 # run one voting cycle where all the voters cast their vote using pick_arm method and give the their top candidate
                 self.get_vote(agent, explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=None)
@@ -212,7 +234,7 @@ class train_model():
                 manupilating_voter = random.choice([i for i in range(self.num_voters)])
                 self.get_vote(agent, explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=manupilating_voter)
 
-            winning_candidate = self.compute_winner(voter_ballot_iter)  # TODO: problem with this, compute winner returns a single winner but the rewrd dict has a tuple of 1 and 0
+            winning_candidate = self.compute_winner(voter_ballot_iter)
 
             welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
             self.update_rewards(voter_ballot_dict, voter_ballot_iter, welfare_dict)
@@ -228,12 +250,13 @@ class train_model():
                         winning_borda_score += voter_ballot_dict[voter]["reward"][tuple(voter_ballot_iter[voter])] / voter_ballot_dict[voter]["count"][tuple(voter_ballot_iter[voter])]
 
                 borda_scores_arr.append(winning_borda_score)
+                welfare_dict_list.append(welfare_dict)
                 # print("winning_cansdidate ", winning_candidate)
-                # print("final_round_reward_cand ", borda_scores_arr)
+                # print(iter, " final_round_reward_cand !!!!!!! ", borda_scores_arr)
 
             # print("winner profile ", candidate_votes)
 
-        return borda_scores_arr
+        return borda_scores_arr, welfare_dict_list
 
 
 # train(10000, 1, 0.5, parsed_soc_data)
