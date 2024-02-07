@@ -1,44 +1,9 @@
 {
-    "test_1": {
-        "epsilon": 0.5,
-        "single_iterative_voting": 1,
-        "grad_epsilon": 0,
-        "epsilon_final": 0.1,
-        "epsilon_decay": 0
-    },
-    "test_2": {
-        "epsilon": 0.99,
-        "single_iterative_voting": 1,
-        "grad_epsilon": 1,
-        "epsilon_final": 0.1,
-        "epsilon_decay": 0.99995
-    },
-    "test_3": {
-        "epsilon": 0.5,
-        "single_iterative_voting": 0,
-        "grad_epsilon": 0,
-        "epsilon_final": 0.1,
-        "epsilon_decay": 0
-    },
-    "test_4": {
-        "epsilon": 0.75,
-        "single_iterative_voting": 0,
-        "grad_epsilon": 0,
-        "epsilon_final": 0.1,
-        "epsilon_decay": 0
-    },
     "test_5": {
         "epsilon": 0.99,
         "single_iterative_voting": 0,
         "grad_epsilon": 1,
         "epsilon_final": 0.1,
         "epsilon_decay": 0.99995
-    },
-    "test_6": {
-        "epsilon": 0.99,
-        "single_iterative_voting": 0,
-        "grad_epsilon": 1,
-        "epsilon_final": 0.45,
-        "epsilon_decay": 0.99
     }
 }

@@ -1,0 +1,40 @@
+
+Sujoy Sikdar  to  Everyone 14:41
+def compute_winner(voter_ballet_iter, voting_rule='plurality'):
+    if voting_rule == 'plurality':
+        winner = compute_plurality_winner(voter_ballet_iter)
+    elif voting_rule == 'borda':
+        winner = compute_borda_winner(voter_ballet_iter)
+    ...
+    return winner
+
+Sujoy Sikdar  to  Everyone 14:44
+def compute_welfare(voter_ballet_iter, winner, scoring_vector):
+    welfare_list = np.zeros(num_voters) // derived from voter_ballet_iter
+    for each voter i:
+        welfare_list[i] = # compute the score for the winner using scoring vector and voter i's preferences
+    return welfare_list
+for borda rule, scoring vector is [m-1, m-2, ...., 0] where m is number of candidates
+
+Sujoy Sikdar  to  Everyone 14:50
+rename voter_top_cand_iter to voter_ballot
+voter_ballot_iter
+
+Sujoy Sikdar  to  Everyone 14:56
+def update_rewards(voter_ballot_dict, voter_ballot_iter, welfare_list):
+    # voter_ballot_iter consists of which arm each voter picks
+    # update reward and count in voter_ballot_dict for every voter and the "arm" they pick with the welfare, i.e., reward in the current iteration
+    return voter_ballot_dict
+
+Sujoy Sikdar 15:04
+def pick_arm(voter_ballot_dict, voter_ballot_iter, voter=None):
+    # Here, voter_ballot_iter is the ballot used in the previous iteration
+    if voter == None:
+        # pick arm for all voters
+        # this determines the voter ballots
+    else:
+       # pick arm for voter
+       explore_exploit(voter_ballot_dict[voter]) # how does this work:
+       # if using greedy, i.e. exploit, pick arm with highest reward
+       # again, this determines all voters' ballots. only voter changed their ballot from previous iter
+   return voter_ballot

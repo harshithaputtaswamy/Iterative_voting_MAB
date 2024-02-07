@@ -8,7 +8,6 @@ from itertools import permutations, combinations
 class train_model():
     def __init__(self, iterations, batch, parsed_soc_data, approval_count, epsilon, grad_epsilon, epsilon_final, epsilon_decay):
         self.parsed_soc_data = parsed_soc_data
-        self.actual_mean = parsed_soc_data["borda_scores"]   #the actual borda score of each candidate
         self.num_candidates = parsed_soc_data["num_candidates"]
         self.num_voters = parsed_soc_data["num_voters"]
         self.flattened_voting_profile = parsed_soc_data["flattened_voting_profile"]
@@ -23,7 +22,7 @@ class train_model():
         self.epsilon = epsilon
         self.epsilon_final = epsilon_final
         self.epsilon_decay = epsilon_decay
-        # self.voting_rule = 'approval'
+        # self.voting_rule = 'plurality'
         self.voting_rule = 'approval'
         self.approval_count = approval_count     # change here
         self.welfare_scoring_vector = [1] * approval_count + [0] * (self.num_candidates - approval_count)       # change here

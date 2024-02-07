@@ -136,5 +136,27 @@
             "1": 10,
             "0": 2
         }
+    },
+    "test3": {
+        "num_voters": 3,
+        "num_candidates": 2,
+        "flattened_voting_profile": {
+            "[1, 0]": 3,
+            "[0, 1]": 0
+        },
+        "full_voting_profile": [
+            [
+                1,
+                0
+            ],
+            [
+                1,
+                0
+            ],
+            [
+                1,
+                0
+            ]
+        ]
     }
 }

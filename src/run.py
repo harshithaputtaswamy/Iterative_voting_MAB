@@ -9,16 +9,30 @@ num_iter_arr = []
 # import matplotlib
 # matplotlib.use("QtAgg")
 
-data_file = open("parsed_soc_data.json")
+# data_file = open("parsed_soc_data.json")
+# parsed_soc_data = json.load(data_file)
+data_file_name = {
+    "name": "sanity_test_data.json",
+    "test_case": "test3"
+}
+data_file = open(data_file_name["name"])
+parsed_soc_data = json.load(data_file)[data_file_name["test_case"]]
+
+
+data_file_name = {
+    "name": "parsed_soc_data.json",
+    "test_case": ""
+}
+data_file = open(data_file_name["name"])
 parsed_soc_data = json.load(data_file)
 
-# data_file = open("sanity_test_data.json")
-# parsed_soc_data = json.load(data_file)["test1"]
 
+# approval_count_value = 
 num_voters = parsed_soc_data["num_voters"]
 num_candidates = parsed_soc_data["num_candidates"]
 flattened_voting_profile = parsed_soc_data["flattened_voting_profile"]
-approval_count_list = range(1, (num_candidates // 2) + 2)    # change here
+approval_count_list = range(1, (num_candidates // 2) + 2)    # creating an array of all possible number of approval counts from 1 to num_candidates/2 + 2
+# approval_count_list = [1]
 print(approval_count_list)
 
 full_voting_profile = []
@@ -52,9 +66,10 @@ for approval_count in approval_count_list:
     for voter in range(num_voters):
         actual_voter_ballet = full_voting_profile[voter]
         approval_vector = [0]*num_candidates
+        print(actual_voter_ballet, actual_voter_ballet[:approval_count])
         for cand in actual_voter_ballet[:approval_count]:
             actual_winning_score_dict[cand] += 1
-    print(actual_winning_score_dict)
+    print(actual_winning_score_dict, "approval count ", approval_count)
     # actual_winner is the candidate who was chosen by most number voters with tie breaking (randomly chosen)
     actual_highest_vote_per_approval[approval_count] = max(actual_winning_score_dict.values())
 
@@ -72,8 +87,8 @@ for approval_count in approval_count_list:
 input_file = open("config.json")
 input_conf = json.load(input_file)
 
-avg_runs = 10
-iterations = 100000
+avg_runs = 1
+iterations = 1000000
 batch = 500
 
 output_file = "results_soc_data.json"
@@ -106,14 +121,16 @@ for approval_count in approval_count_list:
 
     plot = plt.figure()
     for key in result[approval_count].keys():
+        print(result[approval_count][key]["avg_score_arr"][0], result[approval_count][key]["avg_score_arr"][-1])
         plt.plot(num_iter_arr, result[approval_count][key]["avg_score_arr"], label=key)
 
     plt.legend(loc='upper right')
     plt.xlabel("Number of iterations")
     plt.ylabel("Avg Approval Score")
-    plt.ylim(0, actual_highest_vote_per_approval[approval_count] + 2)
+    plt.ylim(actual_highest_vote_per_approval[approval_count] - 1, actual_highest_vote_per_approval[approval_count] + 1)
     plt.show()
-    plt.savefig('results/approval_count_' + str(approval_count) + '_avg_score_soc_data.png')
+    plt.savefig('results/approval_count_' + str(approval_count) + data_file_name["name"] + \
+                 "_" + data_file_name["test_case"] + '_avg_score_soc_data.png')
 
 with open(output_file, "w") as f:
     json.dump(result, f)
