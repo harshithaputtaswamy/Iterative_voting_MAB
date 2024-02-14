@@ -245,11 +245,18 @@ class train_model():
                 # if self.voting_rule == 'borda':
                     # winning_candidate = json.load(winning_candidate)
                 for voter in range(self.num_voters):
-                    if (voter_ballot_dict[voter]["count"][tuple(voter_ballot_iter[voter])]):
-                        winning_borda_score += voter_ballot_dict[voter]["reward"][tuple(voter_ballot_iter[voter])] / voter_ballot_dict[voter]["count"][tuple(voter_ballot_iter[voter])]
+                    highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
+                    if (voter_ballot_dict[voter]["count"][highest_reward_cand]):
+                        winning_borda_score += voter_ballot_dict[voter]["reward"][highest_reward_cand] / voter_ballot_dict[voter]["count"][highest_reward_cand]
 
                 borda_scores_arr.append(winning_borda_score)
                 welfare_dict_list.append(welfare_dict)
+
+            if iter == self.iterations - 1:
+                for voter in range(self.num_voters):
+                    highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
+                    print(highest_reward_cand)
+
                 # print("winning_cansdidate ", winning_candidate)
                 # print(iter, " final_round_reward_cand !!!!!!! ", borda_scores_arr)
 
