@@ -2,11 +2,9 @@ import random
 import numpy as np
 from itertools import permutations, combinations
 
-# epsilon_decay = (1 - 0.1) / 10000
-
 
 class model():
-    def __init__(self, epsilon, num_candidates, num_voters):
+    def __init__(self, epsilon, num_candidates, num_voters, approval_count = 0):
         self.num_candidates = num_candidates
         self.num_voters = num_voters
         self.mean_reward = dict.fromkeys(range(num_candidates), 0)
@@ -14,55 +12,42 @@ class model():
         self.count = 0
         self.exploit = 0
         self.explore = 0
-
+        self.approval_count = approval_count
+        self.all_borda_ballots = list(permutations(range(self.num_candidates)))
+        self.all_approval_ballots = list(combinations(range(self.num_candidates), approval_count))
 
     # implement epsilon greedy method to return the top ballot of the voter and the submitted voter preference
     def epsilon_greedy_voting(self, voter_ballot_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
 
         if np.random.random() > self.epsilon:   # expliotation
-            max_reward = max(voter_ballot_dict["reward"].values())
-            # if more than one ballot have highest rewards then choose one randomly
-            top_ballot_list = list(filter(lambda x: voter_ballot_dict["reward"][x] == max_reward, voter_ballot_dict["reward"]))
+            curr_reward = {}
+            for cand in voter_ballot_dict["reward"].keys():
+                if voter_ballot_dict["count"][cand]:
+                    curr_reward[cand] = voter_ballot_dict["reward"][cand] / voter_ballot_dict["count"][cand]
+                else:
+                    curr_reward[cand] = 0
+            max_reward = max(curr_reward.values())
+            top_ballot_list = list(filter(lambda x: curr_reward[x] == max_reward, curr_reward))
             top_ballot = random.choice(top_ballot_list)
-
-            # if voting_rule == 'approval':
-            #     top_ballot = [0]*self.num_candidates
-            #     highest_rewarding_cands = sorted(voter_ballot_dict["reward"], key=voter_ballot_dict["reward"].get, reverse=True)[: approval_count]
-            #     for cand in highest_rewarding_cands:
-            #         top_ballot[cand] = 1    # returns an array of 1s and 0s where array index is the candidate
-
-            # print("top_ballot exploit", top_ballot)
             self.exploit += 1
-            # print("self.exploit ", self.exploit, top_ballot_list)
-        else:   # return the top ballot based on random voting profile
-            top_ballot = random.choice(list(range(self.num_candidates)))
 
-            if voting_rule == 'borda':
-                top_ballot = random.choice(list(permutations(top_ballot)))
-            
+        else:   # return the top ballot based on random voting profile
+            if voting_rule == 'plurality':
+                top_ballot = random.choice(list(range(self.num_candidates)))
+
+            elif voting_rule == 'borda':
+                top_ballot = random.choice(self.all_borda_ballots)
+
             elif voting_rule == 'approval':
-                ones_indices_combinations = random.choice(list(combinations(range(self.num_candidates), approval_count)))
+                ones_indices_combinations = random.choice(self.all_approval_ballots)
                 top_ballot = [1 if i in ones_indices_combinations else 0 for i in range(self.num_candidates)]
 
-                # top_ballot = [0]*self.num_candidates
-                # for _ in range(approval_count):
-                #     cand = random.choice(range(self.num_candidates))
-                #     print("explore cand", cand)
-                #     top_ballot[cand] = 1
-
             self.explore += 1
-            # print("ballot_options", ballot_options)
-            # top_ballot = random.choice(ballot_options)
-            # print("top_ballot expllore", top_ballot)
-            # print("self.explore ", self.explore)
+
 
         if grad_epsilon and self.epsilon >= epsilon_final:
             # Calculate the epsilon decrement per iteration
             self.epsilon = self.epsilon * epsilon_decay
-            # self.epsilon = max(epsilon_final, self.epsilon * epsilon_decay)
-            # self.epsilon = max(epsilon_final, self.epsilon - epsilon_decay)
-
-        # print("self.exploit ", self.exploit, " self.explore ", self.explore)
 
         return top_ballot
 
