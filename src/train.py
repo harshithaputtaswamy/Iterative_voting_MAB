@@ -1,20 +1,17 @@
 import json
 import random
 import numpy as np
-from model import model
 from itertools import permutations, combinations
 
 
 class train_model():
-    def __init__(self, iterations, batch, voting_rule, parsed_soc_data, epsilon, grad_epsilon, epsilon_final, epsilon_decay, approval_count=0):
+    def __init__(self, agent, iterations, batch, voting_rule, parsed_soc_data, epsilon, grad_epsilon, epsilon_final, epsilon_decay, approval_count=0):
+        self.agent = agent
         self.parsed_soc_data = parsed_soc_data
         self.num_candidates = parsed_soc_data["num_candidates"]
         self.num_voters = parsed_soc_data["num_voters"]
         self.flattened_voting_profile = parsed_soc_data["flattened_voting_profile"]
-        self.full_voting_profile = []
-        for ballot, num in self.flattened_voting_profile.items():
-            for _ in range(num):
-                self.full_voting_profile.append(json.loads(ballot))
+        self.full_voting_profile = parsed_soc_data["full_voting_profile"]
 
         self.iterations = iterations
         self.batch = batch
@@ -36,13 +33,13 @@ class train_model():
                 self.all_approval_combinations.append([1 if i in indices else 0 for i in range(self.num_candidates)])
 
 
-    def get_vote(self, agent, explore_criteria, voter_ballot_dict, voter_ballot_iter, voter = None):
+    def get_vote(self, explore_criteria, voter_ballot_dict, voter_ballot_iter, voter = None):
         if voter is None:
             for voter_i in range(self.num_voters):
-                chosen_ballot = agent.pick_arm(explore_criteria, voter_ballot_dict[voter_i], self.voting_rule, self.grad_epsilon, self.epsilon_final, self.epsilon_decay, self.approval_count)
+                chosen_ballot = self.agent.pick_arm(explore_criteria, voter_ballot_dict[voter_i], self.voting_rule, self.grad_epsilon, self.epsilon_final, self.epsilon_decay, self.approval_count)
                 voter_ballot_iter[voter_i] = chosen_ballot
         else:
-            chosen_ballot = agent.pick_arm(explore_criteria, voter_ballot_dict[voter], self.voting_rule, self.grad_epsilon, self.epsilon_final, self.epsilon_decay, self.approval_count)
+            chosen_ballot = self.agent.pick_arm(explore_criteria, voter_ballot_dict[voter], self.voting_rule, self.grad_epsilon, self.epsilon_final, self.epsilon_decay, self.approval_count)
             voter_ballot_iter[voter] = chosen_ballot
         return
 
@@ -156,8 +153,6 @@ class train_model():
         for voter in range(self.num_voters):
             voter_top_candidates.append(self.full_voting_profile[voter][0])
 
-        agent = model(self.epsilon, self.num_candidates, self.num_voters, self.approval_count)
-
         # append all votes to list, create a list of dictionary for all voters having votes of each voting round
         voter_ballot_dict = {}      # dictionary containing each voter ballot list throughout the iterations
 
@@ -177,7 +172,7 @@ class train_model():
                     voter_ballot_dict[voter]["count"][tuple(comb)] = 0
 
             elif self.voting_rule == 'borda':
-                for cand in list(permutations(list(range(self.num_candidates)))):
+                for cand in list(permutations(range(self.num_candidates))):
                     voter_ballot_dict[voter]["reward"][tuple(cand)] = 0
                     voter_ballot_dict[voter]["count"][tuple(cand)] = 0
 
@@ -217,12 +212,12 @@ class train_model():
         for iter in range(1, self.iterations):
             if not single_iterative_voting:
                 # run one voting cycle where all the voters cast their vote using pick_arm method and give the their top candidate
-                self.get_vote(agent, explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=None)
+                self.get_vote(explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=None)
 
             else:
                 # In each iteration pick one voter randomly and they will use the pick arm method to vote
                 manupilating_voter = random.choice([i for i in range(self.num_voters)])
-                self.get_vote(agent, explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=manupilating_voter)
+                self.get_vote(explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=manupilating_voter)
 
             winning_candidate = self.compute_winner(voter_ballot_iter)
 
@@ -233,19 +228,24 @@ class train_model():
 
                 winning_borda_score = 0
                 # compute the sum of rewards experienced by the voters fot this winning candidate
-                # if self.voting_rule == 'borda':
-                    # winning_candidate = json.load(winning_candidate)
+                
                 for voter in range(self.num_voters):
-                    highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
-                    if (voter_ballot_dict[voter]["count"][highest_reward_cand]):
-                        winning_borda_score += (voter_ballot_dict[voter]["reward"][highest_reward_cand]/voter_ballot_dict[voter]["count"][highest_reward_cand])
+                    if self.voting_rule == "plurality":
+                        ballot_iter = voter_ballot_iter[voter]
+                    elif self.voting_rule == "approval":
+                        ballot_iter = tuple(voter_ballot_iter[voter])
+                    elif self.voting_rule == "borda":
+                        ballot_iter = tuple(voter_ballot_iter[voter])
+                    # highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
+                    if (voter_ballot_dict[voter]["count"][ballot_iter]):
+                        winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
 
                 borda_scores_arr.append(winning_borda_score)
                 welfare_dict_list.append(welfare_dict)
 
-            if iter == self.iterations - 1:
-                for voter in range(self.num_voters):
-                    highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
+            # if iter == self.iterations - 1:
+            #     for voter in range(self.num_voters):
+            #         highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
 
         return borda_scores_arr, welfare_dict_list
 

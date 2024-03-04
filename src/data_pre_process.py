@@ -22,10 +22,9 @@ def process_soc_data(num_voters, num_candidates, generate_data, input_data_file 
     voting_dict = dict()
 
     for res in flattened_res:
-        voting_dict[json.dumps(res[0])] = res[1]
-
+        voting_dict[res[0]] = res[1]
     res_dict["flattened_voting_profile"] = voting_dict
-    res_dict["full_voting_profile"] = [json.loads(key) for key, value in voting_dict.items() for _ in range(value)]
+    res_dict["full_voting_profile"] = [key for key, value in voting_dict.items() for _ in range(value)]
     res_dict["borda_scores"] = borda_scores(instance)
 
     # with open(output_data_file, "w") as outfile:

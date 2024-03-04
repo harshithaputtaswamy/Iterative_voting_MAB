@@ -1,6 +1,7 @@
 import json
 import random
 import numpy as np
+from model import model
 from train import train_model
 from data_pre_process import process_soc_data
 import matplotlib.pyplot as plt
@@ -25,14 +26,15 @@ input_conf = json.load(input_config)
 
 
 # declare all model hyper paramters
-avg_runs = 20
+avg_runs = 100
 iterations = 50000
 batch = 100
 num_voters = 9
 num_candidates = 7
-# voting_rule = "plurality"
-voting_rule = "borda"
+voting_rule = "plurality"
+# voting_rule = "borda"
 # voting_rule = "approval"
+voting_rule = "copeland"
 
 approval_count_list = []
 
@@ -45,20 +47,13 @@ parsed_soc_data_list = []
 for i in range(avg_runs):
     parsed_soc_data_list.append(process_soc_data(num_voters, num_candidates, True))
 
-#     flattened_voting_profile = parsed_soc_data["flattened_voting_profile"]
-#     full_voting_profile = []
-#     for ballet, num in flattened_voting_profile.items():
-#         for i in range(num):
-#             full_voting_profile.append(json.loads(ballet))
-#     parsed_soc_data["full_voting_profile"] = full_voting_profile
-#     parsed_soc_data_list.append(parsed_soc_data)
-
-
 output_file = "results_soc_data.json"
 result = {}
 
 num_iter_arr = [i for i in range(batch, iterations + 1, batch)]
 
+
+print("Voting rule ", voting_rule)
 
 # For approval voting rule
 if voting_rule == "approval":
@@ -93,12 +88,15 @@ if voting_rule == "approval":
     for approval_count in approval_count_list:
         print("approval count - ", approval_count)
         for key in input_conf.keys():
+            print("epsilon - ", input_conf[key]["epsilon"], " decay factor - ", input_conf[key]["epsilon_decay"])
             print("key - ", key)
+
+            agent = model(input_conf[key]["epsilon"], num_candidates, num_voters, approval_count)
             result[approval_count][key] = {}
             avg_score_arr = [0]*(iterations//batch)
             score_arr = []
             for i in tqdm(range(avg_runs)):
-                train = train_model(iterations, batch, voting_rule, parsed_soc_data_list[i], input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"], approval_count)   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
+                train = train_model(agent, iterations, batch, voting_rule, parsed_soc_data_list[i], input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"], approval_count)   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
                 score, welfare_dict_list = train.train(1, input_conf[key]["single_iterative_voting"])
                 for j in range(iterations//batch):
                     avg_score_arr[j] += score[j]
@@ -118,8 +116,8 @@ if voting_rule == "approval":
         plt.ylabel("Avg Approval Score with approval count - " + str(approval_count))
         # plt.ylim(0, actual_highest_vote_per_approval[approval_count] + 1)
         plt.show()
-        plt.savefig('approval_count_' + str(approval_count) + '_' + data_file_name["name"] + \
-                    "_" + str(iterations) + "_" + data_file_name["test_case"] + '.png')
+        plt.savefig('results/approval_count_voter_' + str(num_voters) + '_cand_' + str(num_candidates) + \
+                    "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png')
 
 
 # For plurality voting rule
@@ -160,12 +158,16 @@ elif voting_rule == "plurality":
     result["test_0"]["avg_score_arr"] = [avg_highest_borda_score]*int(iterations / batch)
 
     for key in input_conf.keys():
+
         print("key - ", key)
+        print("epsilon - ", input_conf[key]["epsilon"], " decay factor - ", input_conf[key]["epsilon_decay"])
+
+        agent = model(input_conf[key]["epsilon"], num_candidates, num_voters, approval_count=0)
         result[key] = {}
         avg_score_arr = [0]*(iterations//batch)
         score_arr = []
         for i in tqdm(range(avg_runs)):
-            train = train_model(iterations, batch, voting_rule, parsed_soc_data_list[i], input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"])   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
+            train = train_model(agent, iterations, batch, voting_rule, parsed_soc_data_list[i], input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"])   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
             score, welfare_dict_list = train.train(1, input_conf[key]["single_iterative_voting"])
             for j in range(iterations//batch):
                 avg_score_arr[j] += score[j]
@@ -180,14 +182,15 @@ elif voting_rule == "plurality":
     for key in result.keys():
         print(result[key]["avg_score_arr"][0], result[key]["avg_score_arr"][-1])
         plt.plot(num_iter_arr, result[key]["avg_score_arr"], label=key)
+        plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
 
     plt.legend(loc='upper right')
     plt.xlabel("Number of iterations")
     plt.ylabel("Avg Borda Score with plurality")
     # plt.ylim(0, actual_highest_vote_per_approval + 1)
     plt.show()
-    plt.savefig('plurality_' + data_file_name["name"] + \
-                    "_" + str(iterations) + "_" + data_file_name["test_case"] + '.png')
+    plt.savefig('results/plurality_voter_' + str(num_voters) + '_cand_' + str(num_candidates) + \
+                    "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png')
 
 
 elif voting_rule == "borda":
@@ -219,11 +222,14 @@ elif voting_rule == "borda":
 
     for key in input_conf.keys():
         print("key - ", key)
+        print("epsilon - ", input_conf[key]["epsilon"], " decay factor - ", input_conf[key]["epsilon_decay"])
+
+        agent = model(input_conf[key]["epsilon"], num_candidates, num_voters, approval_count=0)
         result[key] = {}
         avg_score_arr = [0]*(iterations//batch)
         score_arr = []
         for i in tqdm(range(avg_runs)):
-            train = train_model(iterations, batch, voting_rule, parsed_soc_data_list[i], input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"])   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
+            train = train_model(agent, iterations, batch, voting_rule, parsed_soc_data_list[i], input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"])   # for each iteration returns a dictionary containing voter and there fnal reward i.e borda score of top candidate
             score, welfare_dict_list = train.train(1, input_conf[key]["single_iterative_voting"])
             for j in range(iterations//batch):
                 avg_score_arr[j] += score[j]
@@ -238,14 +244,16 @@ elif voting_rule == "borda":
     for key in result.keys():
         print(result[key]["avg_score_arr"][0], result[key]["avg_score_arr"][-1])
         plt.plot(num_iter_arr, result[key]["avg_score_arr"], label=key)
+        plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
+
 
     plt.legend(loc='upper right')
     plt.xlabel("Number of iterations")
     plt.ylabel("Avg Borda Score with Borda")
     # plt.ylim(0, actual_highest_vote_per_approval + 1)
     plt.show()
-    plt.savefig('borda_voter_' + str(num_voters) + '_cand_' + str(num_candidates) + \
-                    "_" + str(iterations) + "_avg_" + str(avg_runs) + '.png')
+    plt.savefig('results/borda_voter_' + str(num_voters) + '_cand_' + str(num_candidates) + \
+                    "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png')
 
 
 with open(output_file, "w") as f:

@@ -22,16 +22,16 @@ class model():
         if np.random.random() > self.epsilon:   # expliotation
             curr_reward = {}
             for cand in voter_ballot_dict["reward"].keys():
-                if voter_ballot_dict["count"][cand]:
+                if voter_ballot_dict["count"][cand] > 0:
                     curr_reward[cand] = voter_ballot_dict["reward"][cand] / voter_ballot_dict["count"][cand]
                 else:
-                    curr_reward[cand] = 0
+                    curr_reward[cand] = voter_ballot_dict["reward"][cand]
             max_reward = max(curr_reward.values())
             top_ballot_list = list(filter(lambda x: curr_reward[x] == max_reward, curr_reward))
             top_ballot = random.choice(top_ballot_list)
             self.exploit += 1
 
-        else:   # return the top ballot based on random voting profile
+        else:   # return the top ballot based on random selection of voting profile
             if voting_rule == 'plurality':
                 top_ballot = random.choice(list(range(self.num_candidates)))
 
