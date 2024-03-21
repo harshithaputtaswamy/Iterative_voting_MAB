@@ -20,8 +20,8 @@ class train_model():
         self.epsilon_final = epsilon_final
         self.epsilon_decay = epsilon_decay
         self.voting_rule = voting_rule
-        if self.voting_rule == 'plurality' or self.voting_rule == 'borda':
-            self.welfare_scoring_vector = [i for i in range(self.num_candidates - 1, -1, -1)]
+        # if self.voting_rule == 'plurality' or self.voting_rule == 'borda':
+        self.welfare_scoring_vector = [i for i in range(self.num_candidates - 1, -1, -1)]
         self.approval_count = approval_count
         self.all_approval_combinations = []     # initialise an array of all possible combinations of approvals i.e [1's and 0's]
         if self.voting_rule == 'approval':
@@ -92,6 +92,39 @@ class train_model():
         winner = random.choice(top_cand_list)
 
         return winner
+    
+
+    def compute_copeland_winner(self, voter_ballot_iter):
+        pair_wise_wins = {}
+        pair_wise_losses = {}
+        copeland_score = {}
+        for cand in range(self.num_candidates):
+            pair_wise_wins[cand] = 0
+            pair_wise_losses[cand] = 0
+            copeland_score[cand] = 0
+
+        # print(voter_ballot_iter.values())
+        pair_wise_combinations = combinations(range(self.num_candidates), 2)
+        for pair in pair_wise_combinations:
+            for ballot in voter_ballot_iter.values():
+                if ballot.index(pair[0]) > ballot.index(pair[1]):
+                    pair_wise_wins[pair[1]] += 1
+                    pair_wise_losses[pair[0]] += 1
+                else:
+                    pair_wise_wins[pair[0]] += 1
+                    pair_wise_losses[pair[1]] += 1
+        # print("pair_wise_wins ", pair_wise_wins)
+        # print("pair_wise_losses ", pair_wise_losses)
+
+        for cand in range(self.num_candidates):
+            copeland_score[cand] = pair_wise_wins[cand] - pair_wise_losses[cand]
+        # print("copeland score ", copeland_score)
+        highest_vote = max(copeland_score.values())
+        winning_candidate_list = list(filter(lambda x: copeland_score[x] == highest_vote, copeland_score))
+        winning_candidate = random.choice(winning_candidate_list)
+
+        # print("winning_candidate ", winning_candidate_list)
+        return winning_candidate              
 
 
     def compute_winner(self, voter_ballot_iter):
@@ -101,6 +134,8 @@ class train_model():
             winner = self.compute_borda_winner(voter_ballot_iter)
         elif self.voting_rule == 'approval':
             winner = self.compute_approval_winner(voter_ballot_iter)
+        elif self.voting_rule == 'copeland':
+            winner = self.compute_copeland_winner(voter_ballot_iter)
         return winner
 
 
@@ -136,6 +171,8 @@ class train_model():
             elif self.voting_rule == "approval":
                 ballot = tuple(voter_ballot_iter[voter])
             elif self.voting_rule == "borda":
+                ballot = tuple(voter_ballot_iter[voter])
+            elif self.voting_rule == 'copeland':
                 ballot = tuple(voter_ballot_iter[voter])
 
             voter_ballot_dict[voter]["count"][ballot] += 1
@@ -176,12 +213,19 @@ class train_model():
                     voter_ballot_dict[voter]["reward"][tuple(cand)] = 0
                     voter_ballot_dict[voter]["count"][tuple(cand)] = 0
 
+            elif self.voting_rule == 'copeland':
+                for cand in list(permutations(range(self.num_candidates))):
+                    voter_ballot_dict[voter]["reward"][tuple(cand)] = 0
+                    voter_ballot_dict[voter]["count"][tuple(cand)] = 0
+
         voter_ballot_iter = {}        # dictionary containing voter and their corresponding ballot
         for voter_i in range(self.num_voters):
             if self.voting_rule == 'plurality':
                 cand = self.full_voting_profile[voter_i][0]  # initialy asign this dictionary with true top candidate of voters
             elif self.voting_rule == 'borda':
                 cand = self.full_voting_profile[voter_i]  # initialy asign this dictionary with true preferences of voters
+            elif self.voting_rule == 'copeland':
+                cand = self.full_voting_profile[voter_i]
             elif self.voting_rule == 'approval':
                 cand = [0]*self.num_candidates
                 for c in self.full_voting_profile[voter_i][ : self.approval_count]:  # true approval vector of voters, first k cands get 1 and rest 0
@@ -201,6 +245,8 @@ class train_model():
             elif self.voting_rule == "approval":
                 ballot_iter = tuple(voter_ballot_iter[voter])
             elif self.voting_rule == "borda":
+                ballot_iter = tuple(voter_ballot_iter[voter])
+            elif self.voting_rule == "copeland":
                 ballot_iter = tuple(voter_ballot_iter[voter])
 
             if (voter_ballot_dict[voter]["count"][ballot_iter]):
@@ -235,6 +281,8 @@ class train_model():
                     elif self.voting_rule == "approval":
                         ballot_iter = tuple(voter_ballot_iter[voter])
                     elif self.voting_rule == "borda":
+                        ballot_iter = tuple(voter_ballot_iter[voter])
+                    elif self.voting_rule == "copeland":
                         ballot_iter = tuple(voter_ballot_iter[voter])
                     # highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
                     if (voter_ballot_dict[voter]["count"][ballot_iter]):

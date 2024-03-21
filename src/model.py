@@ -13,7 +13,7 @@ class model():
         self.exploit = 0
         self.explore = 0
         self.approval_count = approval_count
-        self.all_borda_ballots = list(permutations(range(self.num_candidates)))
+        self.full_preferences = list(permutations(range(self.num_candidates)))
         self.all_approval_ballots = list(combinations(range(self.num_candidates), approval_count))
 
     # implement epsilon greedy method to return the top ballot of the voter and the submitted voter preference
@@ -36,7 +36,10 @@ class model():
                 top_ballot = random.choice(list(range(self.num_candidates)))
 
             elif voting_rule == 'borda':
-                top_ballot = random.choice(self.all_borda_ballots)
+                top_ballot = random.choice(self.full_preferences)
+
+            elif voting_rule == 'copeland':
+                top_ballot = random.choice(self.full_preferences)
 
             elif voting_rule == 'approval':
                 ones_indices_combinations = random.choice(self.all_approval_ballots)

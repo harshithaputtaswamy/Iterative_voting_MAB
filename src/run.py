@@ -7,6 +7,7 @@ from data_pre_process import process_soc_data
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from preflibtools.properties import borda_scores
+from itertools import permutations, combinations
 
 
 # data_file_name = {
@@ -27,14 +28,14 @@ input_conf = json.load(input_config)
 
 # declare all model hyper paramters
 avg_runs = 100
-iterations = 50000
-batch = 100
-num_voters = 9
-num_candidates = 7
-voting_rule = "plurality"
-# voting_rule = "borda"
+iterations = 100000
+batch = 1000
+num_voters = 5
+num_candidates = 3
+# voting_rule = "plurality"
+voting_rule = "borda"
 # voting_rule = "approval"
-voting_rule = "copeland"
+# voting_rule = "copeland"
 
 approval_count_list = []
 
@@ -73,7 +74,16 @@ if voting_rule == "approval":
                 for cand in actual_voter_ballet[:approval_count]:
                     actual_winning_score_dict[cand] += 1
             print(actual_winning_score_dict, "approval count ", approval_count)
-            actual_highest_vote_per_approval[approval_count] += max(actual_winning_score_dict.values())
+            max_approval = max(actual_winning_score_dict.values())
+            top_cand_list = list(filter(lambda x: actual_winning_score_dict[x] == max_approval, actual_winning_score_dict))
+            winning_candidate = random.choice(top_cand_list)
+
+            for voter in range(num_voters):
+                actual_voter_ballet = parsed_soc_data["full_voting_profile"][voter]
+                borda_score = num_candidates - 1 - actual_voter_ballet.index(winning_candidate)
+                actual_winning_score_dict[voter] = borda_score
+
+            actual_highest_vote_per_approval[approval_count] += sum(actual_winning_score_dict.values())
 
         actual_highest_vote_per_approval[approval_count] /= avg_runs
     print("actual_highest_vote_per_approval ", actual_highest_vote_per_approval)
@@ -113,7 +123,7 @@ if voting_rule == "approval":
 
         plt.legend(loc='upper right')
         plt.xlabel("Number of iterations")
-        plt.ylabel("Avg Approval Score with approval count - " + str(approval_count))
+        plt.ylabel("Avg borda Score with approval count - " + str(approval_count))
         # plt.ylim(0, actual_highest_vote_per_approval[approval_count] + 1)
         plt.show()
         plt.savefig('results/approval_count_voter_' + str(num_voters) + '_cand_' + str(num_candidates) + \
@@ -182,7 +192,7 @@ elif voting_rule == "plurality":
     for key in result.keys():
         print(result[key]["avg_score_arr"][0], result[key]["avg_score_arr"][-1])
         plt.plot(num_iter_arr, result[key]["avg_score_arr"], label=key)
-        plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
+        # plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
 
     plt.legend(loc='upper right')
     plt.xlabel("Number of iterations")
@@ -199,6 +209,7 @@ elif voting_rule == "borda":
     avg_highest_borda_welfare = 0
 
     for parsed_soc_data in parsed_soc_data_list:
+        print(parsed_soc_data["full_voting_profile"])
         voter_ballot_iter = {}        # dictionary containing voter and their corresponding ballot
         for voter_i in range(num_voters):
             voter_ballot_iter[voter_i] = parsed_soc_data["full_voting_profile"][voter_i]
@@ -211,8 +222,15 @@ elif voting_rule == "borda":
                 else:
                     candidate_votes[cand] =  num_candidates - 1 - ballot.index(cand)
         print(candidate_votes)
-        highest_borda_score = max(candidate_votes.values())
-        avg_highest_borda_welfare += highest_borda_score
+        highest_vote = max(candidate_votes.values())
+        winning_candidate_list = list(filter(lambda x: candidate_votes[x] == highest_vote, candidate_votes))
+        winning_candidate = random.choice(winning_candidate_list)
+
+        for voter in range(num_voters):
+            actual_voter_ballet = parsed_soc_data["full_voting_profile"][voter]
+            borda_score = num_candidates - 1 - actual_voter_ballet.index(winning_candidate)
+            actual_winning_score_dict[voter] = borda_score
+        avg_highest_borda_welfare += sum(actual_winning_score_dict.values())
     
     avg_highest_borda_welfare /= len(parsed_soc_data_list) 
     print("average highest welfare of voters: ", avg_highest_borda_welfare)
@@ -244,7 +262,7 @@ elif voting_rule == "borda":
     for key in result.keys():
         print(result[key]["avg_score_arr"][0], result[key]["avg_score_arr"][-1])
         plt.plot(num_iter_arr, result[key]["avg_score_arr"], label=key)
-        plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
+        # plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
 
 
     plt.legend(loc='upper right')
@@ -253,6 +271,81 @@ elif voting_rule == "borda":
     # plt.ylim(0, actual_highest_vote_per_approval + 1)
     plt.show()
     plt.savefig('results/borda_voter_' + str(num_voters) + '_cand_' + str(num_candidates) + \
+                    "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png')
+
+
+elif voting_rule == "copeland":
+    actual_winning_score_dict = {}
+    avg_highest_copeland_welfare = 0
+
+    for parsed_soc_data in parsed_soc_data_list:
+        # print(parsed_soc_data["full_voting_profile"])
+        voter_ballot_iter = {}        # dictionary containing voter and their corresponding ballot
+        for voter_i in range(num_voters):
+            voter_ballot_iter[voter_i] = parsed_soc_data["full_voting_profile"][voter_i]
+
+        pair_wise_combinations = combinations(range(num_candidates), 2)
+        pair_wise_winner = {}
+        for cand in range(num_candidates):
+            pair_wise_winner[cand] = 0
+
+        for pair in pair_wise_combinations:
+            for ballot in voter_ballot_iter.values():
+                if ballot.index(pair[0]) > ballot.index(pair[1]):
+                    pair_wise_winner[pair[1]] += 1
+                else:
+                    pair_wise_winner[pair[0]] += 1
+
+        # print("pair_wise_winner ", pair_wise_winner)
+        highest_copeland_score = max(pair_wise_winner.values())
+        winning_candidate_list = list(filter(lambda x: pair_wise_winner[x] == highest_copeland_score, pair_wise_winner))
+        winning_candidate = random.choice(winning_candidate_list)
+
+        for voter in range(num_voters):
+            actual_voter_ballet = parsed_soc_data["full_voting_profile"][voter]
+            borda_score = num_candidates - 1 - actual_voter_ballet.index(winning_candidate)
+            actual_winning_score_dict[voter] = borda_score
+        avg_highest_copeland_welfare += sum(actual_winning_score_dict.values())
+    
+    avg_highest_copeland_welfare /= len(parsed_soc_data_list) 
+    print("average highest copeland score: ", avg_highest_copeland_welfare)
+
+    result["test_0"] = {}
+    result["test_0"]["avg_score_arr"] = [avg_highest_copeland_welfare]*int(iterations / batch)
+
+    for key in input_conf.keys():
+        print("key - ", key)
+        print("epsilon - ", input_conf[key]["epsilon"], " decay factor - ", input_conf[key]["epsilon_decay"])
+
+        agent = model(input_conf[key]["epsilon"], num_candidates, num_voters, approval_count=0)
+        result[key] = {}
+        avg_score_arr = [0]*(iterations//batch)
+        score_arr = []
+        for i in tqdm(range(avg_runs)):
+            train = train_model(agent, iterations, batch, voting_rule, parsed_soc_data_list[i], input_conf[key]["epsilon"], input_conf[key]["grad_epsilon"], input_conf[key]["epsilon_final"], input_conf[key]["epsilon_decay"])   # for each iteration returns a dictionary containing voter and there fnal reward i.e copeland score of top candidate
+            score, welfare_dict_list = train.train(1, input_conf[key]["single_iterative_voting"])
+            for j in range(iterations//batch):
+                avg_score_arr[j] += score[j]
+
+        for i in range(iterations//batch):
+            avg_score_arr[i] /= avg_runs
+
+        result[key]["avg_score_arr"] = avg_score_arr
+        result[key]["welfare_dict_list"] = welfare_dict_list
+
+    plot = plt.figure()
+    for key in result.keys():
+        print(result[key]["avg_score_arr"][0], result[key]["avg_score_arr"][-1])
+        plt.plot(num_iter_arr, result[key]["avg_score_arr"], label=key)
+        # plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
+
+
+    plt.legend(loc='upper right')
+    plt.xlabel("Number of iterations")
+    plt.ylabel("Avg borda Score with copeland voting rule")
+    # plt.ylim(0, actual_highest_vote_per_approval + 1)
+    plt.show()
+    plt.savefig('results/copeland_voter_' + str(num_voters) + '_cand_' + str(num_candidates) + \
                     "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png')
 
 
