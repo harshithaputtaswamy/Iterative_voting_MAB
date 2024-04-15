@@ -4,7 +4,7 @@ from itertools import permutations, combinations
 
 
 class model():
-    def __init__(self, epsilon, num_candidates, num_voters, approval_count = 0):
+    def __init__(self, epsilon, num_candidates, committee_size, num_voters, approval_count = 0):
         self.num_candidates = num_candidates
         self.num_voters = num_voters
         self.mean_reward = dict.fromkeys(range(num_candidates), 0)
@@ -17,7 +17,7 @@ class model():
         self.all_approval_ballots = list(combinations(range(self.num_candidates), approval_count))
 
     # implement epsilon greedy method to return the top ballot of the voter and the submitted voter preference
-    def epsilon_greedy_voting(self, voter_ballot_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
+    def epsilon_greedy_voting(self, voter_ballot_dict, voting_rule, voting_setting, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
 
         if np.random.random() > self.epsilon:   # expliotation
             curr_reward = {}
@@ -56,13 +56,7 @@ class model():
 
 
     # pick arms based on the given exploration method
-    def pick_arm(self, explore_criteria, voter_ballot_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
+    def pick_arm(self, explore_criteria, voter_ballot_dict, voting_rule, voting_setting, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
         if explore_criteria == 1:                                               #for epsilon greedy
-            return self.epsilon_greedy_voting(voter_ballot_dict, voting_rule, grad_epsilon, epsilon_final, epsilon_decay, approval_count)
+            return self.epsilon_greedy_voting(voter_ballot_dict, voting_rule, voting_setting, grad_epsilon, epsilon_final, epsilon_decay, approval_count)
 
-
-    # update the mean_reward - calculate the average borda scores of candidates over time
-    def update_mean(self, reward):
-        self.count += 1
-        for i in range(self.num_candidates):
-            self.mean_reward[i] = (self.mean_reward[i] + reward[i] ) / self.count
