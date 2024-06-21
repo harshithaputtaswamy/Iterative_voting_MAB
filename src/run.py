@@ -28,13 +28,14 @@ input_conf = json.load(input_config)
 
 # declare all model hyper paramters
 voting_setting = 1  # 0 - single winner setting, 1 - committee voting
-committee_size = 5  # ( k will be the committee size)
+committee_size = 3  # ( k will be the committee size)
 
-num_voters = 9
-num_candidates = 7
+num_voters = 10
+num_candidates = 5
 # voting_rule = "plurality"
 # voting_rule = "borda"
-voting_rule = "approval"
+voting_rule = "borda_top_cand"
+# voting_rule = "approval"
 # voting_rule = "copeland"
 
 
@@ -52,6 +53,7 @@ parsed_soc_data_list = []
 for i in range(avg_runs):
     parsed_soc_data_list.append(process_soc_data(num_voters, num_candidates, True))
 
+print(parsed_soc_data_list)
 output_file = "results_soc_data.json"
 result = {}
 
@@ -59,8 +61,6 @@ num_iter_arr = [i for i in range(batch, iterations + 1, batch)]
 
 print("Voting rule ", voting_rule, " voting_setting ", voting_setting)
 
-
-"""Single winner setting"""
 
 if voting_rule == "approval":
     # Loop through the different approval count list and different test cases to generate results
@@ -144,12 +144,3 @@ else:
 
 with open(output_file, "w") as f:
     json.dump(result, f)
-
-"""End of Single winner setting"""
-
-
-"""Committe voting setting"""
-
-
-
-"""End of Committe voting setting"""

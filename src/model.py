@@ -35,7 +35,7 @@ class model():
             if voting_rule == 'plurality':
                 top_ballot = random.choice(list(range(self.num_candidates)))
 
-            elif voting_rule == 'borda':
+            elif voting_rule == 'borda' or voting_rule == 'borda_top_cand':
                 top_ballot = random.choice(self.full_preferences)
 
             elif voting_rule == 'copeland':
