@@ -241,7 +241,9 @@ class train_model():
     def train(self, explore_criteria, single_iterative_voting):
 
         borda_scores_arr = []   # list of borda scores at given n iterations
-        welfare_dict_list = []  # lst of welfare dictionaries of voters
+        welfare_dict_list = []  # list of welfare dictionaries of voters
+        iter_winners_list = [] # list of winners for n iterations
+        voter_ballot_iter_list = [] # list of votter ballots for n iterations
 
         voter_top_candidates = []
         for voter in range(self.num_voters):
@@ -292,8 +294,11 @@ class train_model():
                 cand = tuple(cand)
             
             voter_ballot_iter[voter_i] = cand
+        
+        voter_ballot_iter_list.append(voter_ballot_iter)
 
         winning_candidate = self.compute_winner(voter_ballot_iter)
+        iter_winners_list.append(winning_candidate)
 
         welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
         self.update_rewards(voter_ballot_dict, voter_ballot_iter, welfare_dict)
@@ -325,31 +330,31 @@ class train_model():
                 manupilating_voter = random.choice([i for i in range(self.num_voters)])
                 self.get_vote(explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=manupilating_voter)
 
+            voter_ballot_iter_list.append(voter_ballot_iter)
+
             winning_candidate = self.compute_winner(voter_ballot_iter)
+            iter_winners_list.append(winning_candidate)
 
             welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
             self.update_rewards(voter_ballot_dict, voter_ballot_iter, welfare_dict)
 
-            if iter % self.batch == 0:
-                winning_borda_score = 0
-                # compute the sum of rewards experienced by the voters fot this winning candidate
-                for voter in range(self.num_voters):
-                    if self.voting_rule == "plurality":
-                        ballot_iter = voter_ballot_iter[voter]
-                    elif self.voting_rule == "approval":
-                        ballot_iter = tuple(voter_ballot_iter[voter])
-                    elif self.voting_rule == "borda" or self.voting_rule == 'borda_top_cand':
-                        ballot_iter = tuple(voter_ballot_iter[voter])
-                    elif self.voting_rule == "copeland":
-                        ballot_iter = tuple(voter_ballot_iter[voter])
-                    # highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
-                    if (voter_ballot_dict[voter]["count"][ballot_iter]):
-                        winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
-                borda_scores_arr.append(winning_borda_score)
-                welfare_dict_list.append(welfare_dict)
+            # if iter % self.batch == 0:
+            winning_borda_score = 0
+            # compute the sum of rewards experienced by the voters fot this winning candidate
+            for voter in range(self.num_voters):
+                if self.voting_rule == "plurality":
+                    ballot_iter = voter_ballot_iter[voter]
+                elif self.voting_rule == "approval":
+                    ballot_iter = tuple(voter_ballot_iter[voter])
+                elif self.voting_rule == "borda" or self.voting_rule == 'borda_top_cand':
+                    ballot_iter = tuple(voter_ballot_iter[voter])
+                elif self.voting_rule == "copeland":
+                    ballot_iter = tuple(voter_ballot_iter[voter])
+                # highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
+                if (voter_ballot_dict[voter]["count"][ballot_iter]):
+                    winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
+            borda_scores_arr.append(winning_borda_score)
+            welfare_dict_list.append(welfare_dict)
 
-        return borda_scores_arr, welfare_dict_list
+        return borda_scores_arr, welfare_dict_list, iter_winners_list, voter_ballot_iter_list
 
-
-# train(10000, 1, 0.5, parsed_soc_data)
-# 10 voter 5 cand, k = 3
