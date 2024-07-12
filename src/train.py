@@ -1,4 +1,5 @@
 import json
+import copy
 import random
 import numpy as np
 from itertools import permutations, combinations
@@ -165,7 +166,7 @@ class train_model():
         
         # Find the top k candidates with the highest total scores
         winning_committee = sorted(candidate_votes, key = candidate_votes.get, reverse=True)[:self.committee_size]
-        print(winning_committee)
+        # print(winning_committee)
 
         return winning_committee
 
@@ -295,7 +296,8 @@ class train_model():
             
             voter_ballot_iter[voter_i] = cand
         
-        voter_ballot_iter_list.append(voter_ballot_iter)
+        voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
+        voter_ballot_iter_list.append(voter_ballot_iter_dict)
 
         winning_candidate = self.compute_winner(voter_ballot_iter)
         iter_winners_list.append(winning_candidate)
@@ -320,7 +322,8 @@ class train_model():
         borda_scores_arr.append(winning_borda_score)
         welfare_dict_list.append(welfare_dict)
 
-        for iter in range(1, self.iterations):
+        # Run the training loop for iterations - 1 times with pick arm method exploration and exploitation method
+        for iter in range(1, self.iterations - 1):
             if not single_iterative_voting:
                 # run one voting cycle where all the voters cast their vote using pick_arm method and give the their top candidate
                 self.get_vote(explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=None)
@@ -330,7 +333,8 @@ class train_model():
                 manupilating_voter = random.choice([i for i in range(self.num_voters)])
                 self.get_vote(explore_criteria, voter_ballot_dict, voter_ballot_iter, voter=manupilating_voter)
 
-            voter_ballot_iter_list.append(voter_ballot_iter)
+            voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
+            voter_ballot_iter_list.append(voter_ballot_iter_dict)
 
             winning_candidate = self.compute_winner(voter_ballot_iter)
             iter_winners_list.append(winning_candidate)
@@ -355,6 +359,46 @@ class train_model():
                     winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
             borda_scores_arr.append(winning_borda_score)
             welfare_dict_list.append(welfare_dict)
+        
+        # Get the results for explotation in last iteration
+        for voter in range(self.num_voters):
+            curr_reward = {}
+            for cand in voter_ballot_dict[voter]["reward"].keys():
+                if voter_ballot_dict[voter]["count"][cand] > 0:
+                    curr_reward[cand] = voter_ballot_dict[voter]["reward"][cand] / voter_ballot_dict[voter]["count"][cand]
+                else:
+                    curr_reward[cand] = voter_ballot_dict[voter]["reward"][cand]
+            max_reward = max(curr_reward.values())
+            top_ballot_list = list(filter(lambda x: curr_reward[x] == max_reward, curr_reward))
+            top_ballot = random.choice(top_ballot_list)
+
+            voter_ballot_iter[voter_i] = top_ballot
+        
+        voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
+        voter_ballot_iter_list.append(voter_ballot_iter)
+
+        winning_candidate = self.compute_winner(voter_ballot_iter)
+        iter_winners_list.append(winning_candidate)
+
+        welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
+        self.update_rewards(voter_ballot_dict, voter_ballot_iter, welfare_dict)
+
+        winning_borda_score = 0
+        # compute the sum of rewards experienced by the voters fot this winning candidate
+        for voter in range(self.num_voters):
+            if self.voting_rule == "plurality":
+                ballot_iter = voter_ballot_iter[voter]
+            elif self.voting_rule == "approval":
+                ballot_iter = tuple(voter_ballot_iter[voter])
+            elif self.voting_rule == "borda" or self.voting_rule == 'borda_top_cand':
+                ballot_iter = tuple(voter_ballot_iter[voter])
+            elif self.voting_rule == "copeland":
+                ballot_iter = tuple(voter_ballot_iter[voter])
+            # highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
+            if (voter_ballot_dict[voter]["count"][ballot_iter]):
+                winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
+        borda_scores_arr.append(winning_borda_score)
+        welfare_dict_list.append(welfare_dict)
 
         return borda_scores_arr, welfare_dict_list, iter_winners_list, voter_ballot_iter_list
 
