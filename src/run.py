@@ -29,20 +29,20 @@ input_conf = json.load(input_config)
 
 # declare all model hyper paramters
 voting_setting = 1  # 0 - single winner setting, 1 - committee voting
-committee_size_list = [3]  # ( k will be the committee size)
+committee_size_list = [5]  # ( k will be the committee size)
 num_voters = 10
-num_candidates = 5
+num_candidates = 3
 
 
 # voting_rule = "plurality"
-# voting_rule = "borda"
-voting_rule = "borda_top_cand"
+voting_rule = "borda"
+# voting_rule = "borda_top_cand"
 # voting_rule = "approval"
 # voting_rule = "copeland"
 
 
-avg_runs = 50
-iterations = 100000
+avg_runs = 20
+iterations = 50000
 batch = 1000
 
 
