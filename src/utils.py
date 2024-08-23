@@ -25,8 +25,8 @@ def get_borda_score(curr_voting_profile, num_alternatives):
 
 
 
-file_to_read = "setting_1_borda_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
-preferences, run_setting = get_preferences(file_to_read, "borda")
+file_to_read = "setting_1_approval_tie_breaking_rand_approval_count_2_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
+preferences, run_setting = get_preferences(file_to_read, "approval")
 num_voters = run_setting["num_voters"]
 voting_setting = run_setting["voting_setting"]
 committee_size = run_setting["committee_size"]
@@ -34,9 +34,11 @@ num_candidates = run_setting["num_candidates"]
 voting_rule = run_setting["voting_rule"]
 avg_runs = run_setting["avg_runs"]
 iterations = run_setting["iterations"]
+approval_count = run_setting["approval_count"]
+tie_breaking_rule = run_setting["tie_breaking_rule"]
 kt_dict_interval = {}
 
-window_size = 100
+window_size = 10
 end_interval = iterations - iterations
 
 
@@ -49,7 +51,7 @@ def kt_distance(preference_dict_t, preference_dict_t_n, num_voters):
 	return total_kt/num_voters
 
 
-def sliding_kt_distance(t, window_size):
+def sliding_kt_distance(t):
 	kt_dict = {}
 	for test in preferences.keys():
 		# print(test)
@@ -57,10 +59,10 @@ def sliding_kt_distance(t, window_size):
 		avg_run_kt = [0]*window_size
 		kt = 0
 		for run in preferences[test].keys():
-			curr_pref = preferences[test][run][t - window_size : t]
+			curr_pref = preferences[test][run][abs(t - window_size) : t]
 			kt_iters = []
 			for pref in curr_pref:
-				kt_iters.append(kt_distance(preferences[test][run][t], pref, num_voters))
+				kt_iters.append(kt_distance(preferences[test][run][t-1], pref, num_voters))
 			for i in range(window_size):
 				avg_run_kt[i] += kt_iters[i]        # sum over different runs
 
@@ -71,9 +73,9 @@ def sliding_kt_distance(t, window_size):
 	return kt_dict
 
 
-for i in range(iterations - 1, end_interval, -window_size):
+for i in range(iterations, end_interval, -window_size):
 	print(i)
-	kt_dict = sliding_kt_distance(i, window_size)
+	kt_dict = sliding_kt_distance(i)
 	if not kt_dict_interval:
 		for test in kt_dict.keys():
 			kt_dict_interval[test] = [kt_dict[test]]
@@ -93,9 +95,13 @@ os.makedirs(curr_dir + "/graph_results/" + voting_rule, exist_ok=True)
 
 plt.legend(loc='upper right')
 plt.xlabel("Number of iterations")
-plt.ylabel("Avg kendalltau distance - ")
+plt.ylabel("Avg kendalltau corelation - ")
 plt.show()
-graph_file = 'kt_distance_setting_{}_{}_voter_'.format(voting_setting, voting_rule) + str(num_voters) + '_cand_' + str(num_candidates) + \
+if voting_rule == "approval":
+	graph_file = 'kt_distance_setting_{}_{}_tie_breaking_{}_approval_count_{}_voter_'.format(voting_setting, voting_rule, tie_breaking_rule, approval_count) + str(num_voters) + '_cand_' + str(num_candidates) + \
+                "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_to_" + str(end_interval) + "_avg_" + str(avg_runs) + "_window_size_" + str(window_size) + '.png'
+else:
+	graph_file = 'kt_distance_setting_{}_{}_tie_breaking_{}_voter_'.format(voting_setting, voting_rule, tie_breaking_rule) + str(num_voters) + '_cand_' + str(num_candidates) + \
                 "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_to_" + str(end_interval) + "_avg_" + str(avg_runs) + "_window_size_" + str(window_size) + '.png'
 graph_path = os.path.join(curr_dir + "/graph_results/" + voting_rule + "/", graph_file)
 

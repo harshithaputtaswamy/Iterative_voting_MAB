@@ -6,7 +6,7 @@ from itertools import permutations, combinations
 
 
 class train_model():
-    def __init__(self, agent, iterations, batch, committee_size, voting_rule, voting_setting, parsed_soc_data, epsilon, grad_epsilon, epsilon_final, epsilon_decay, approval_count=0):
+    def __init__(self, agent, iterations, batch, committee_size, voting_rule, tie_breaking_rule, voting_setting, parsed_soc_data, epsilon, grad_epsilon, epsilon_final, epsilon_decay, approval_count=0):
         self.agent = agent
         self.parsed_soc_data = parsed_soc_data
         self.num_candidates = parsed_soc_data["num_candidates"]
@@ -24,6 +24,7 @@ class train_model():
         self.committee_size = committee_size
         self.voting_rule = voting_rule
         self.voting_setting = voting_setting
+        self.tie_breaking_rule = tie_breaking_rule
 
         self.all_committee_combinations = list(combinations(range(self.num_candidates), committee_size))
 
@@ -148,9 +149,29 @@ class train_model():
 
         highest_vote = max(winning_committee.values())
         winning_committee_list = list(filter(lambda x: winning_committee[x] == highest_vote, winning_committee))
-        winning_committee = random.choice(winning_committee_list)
+        num_ties = len(winning_committee_list)
 
-        return winning_committee
+        ''' 
+            Tie-breaking - Dictionary order
+            Exanple: winning_committee_list = [[1, 2, 3], [1, 2, 4]]
+            winning_committee = [1, 2, 3] - last index tie-breaking
+        '''
+        winning_committee = None
+
+        if self.tie_breaking_rule == "dict":
+            for i in range(len(winning_committee_list[0])):
+                curr_max = -1
+                for j in range(len((winning_committee_list))):
+                    if winning_committee_list[j][i] > curr_max:
+                        curr_max = winning_committee_list[j][i]
+                        winning_committee = winning_committee_list[j]
+                if winning_committee:
+                    break
+        elif self.tie_breaking_rule == "rand":
+            winning_committee = random.choice(winning_committee_list)
+        # print(winning_committee)
+
+        return winning_committee, num_ties
     
 
     def compute_k_borda_winner(self, voter_ballot_iter):
@@ -175,7 +196,8 @@ class train_model():
         winner = []
         if self.voting_setting == 1:    # committee voting setting
             if self.voting_rule == 'approval':
-                winner = self.compute_committee_approval_winner(voter_ballot_iter)
+                winner, num_ties = self.compute_committee_approval_winner(voter_ballot_iter)
+                return winner, num_ties
             elif self.voting_rule == 'borda' or self.voting_rule == 'borda_top_cand':
                 winner = self.compute_k_borda_winner(voter_ballot_iter)
 
@@ -245,6 +267,7 @@ class train_model():
         welfare_dict_list = []  # list of welfare dictionaries of voters
         iter_winners_list = [] # list of winners for n iterations
         voter_ballot_iter_list = [] # list of votter ballots for n iterations
+        num_ties_list = []
 
         voter_top_candidates = []
         for voter in range(self.num_voters):
@@ -299,7 +322,11 @@ class train_model():
         voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
         voter_ballot_iter_list.append(voter_ballot_iter_dict)
 
-        winning_candidate = self.compute_winner(voter_ballot_iter)
+        if self.voting_setting == 1 and self.voting_rule == "approval":
+            winning_candidate, num_ties = self.compute_winner(voter_ballot_iter)
+            num_ties_list.append(num_ties)
+        else:
+            winning_candidate = self.compute_winner(voter_ballot_iter)
         iter_winners_list.append(winning_candidate)
 
         welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
@@ -336,9 +363,13 @@ class train_model():
             voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
             voter_ballot_iter_list.append(voter_ballot_iter_dict)
 
-            winning_candidate = self.compute_winner(voter_ballot_iter)
+            if self.voting_setting == 1 and self.voting_rule == "approval":
+                winning_candidate, num_ties = self.compute_winner(voter_ballot_iter)
+                num_ties_list.append(num_ties)
+            else:
+                winning_candidate = self.compute_winner(voter_ballot_iter)
             iter_winners_list.append(winning_candidate)
-
+            
             welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
             self.update_rewards(voter_ballot_dict, voter_ballot_iter, welfare_dict)
 
@@ -377,7 +408,12 @@ class train_model():
         voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
         voter_ballot_iter_list.append(voter_ballot_iter)
 
-        winning_candidate = self.compute_winner(voter_ballot_iter)
+        if self.voting_setting == 1 and self.voting_rule == "approval":
+            winning_candidate, num_ties = self.compute_winner(voter_ballot_iter)
+            num_ties_list.append(num_ties)
+        else:
+            winning_candidate = self.compute_winner(voter_ballot_iter)
+
         iter_winners_list.append(winning_candidate)
 
         welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
@@ -397,8 +433,9 @@ class train_model():
             # highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
             if (voter_ballot_dict[voter]["count"][ballot_iter]):
                 winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
+        
         borda_scores_arr.append(winning_borda_score)
         welfare_dict_list.append(welfare_dict)
 
-        return borda_scores_arr, welfare_dict_list, iter_winners_list, voter_ballot_iter_list
+        return borda_scores_arr, welfare_dict_list, iter_winners_list, voter_ballot_iter_list, num_ties_list
 
