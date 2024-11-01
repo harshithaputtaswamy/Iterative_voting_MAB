@@ -2,7 +2,7 @@ import os
 import json
 from scipy import stats
 import matplotlib.pyplot as plt
-from read_result import get_preferences
+from read_result import read_results
 
 
 
@@ -24,9 +24,18 @@ def get_borda_score(curr_voting_profile, num_alternatives):
 
 
 
+voting_rule = "chamberlin_courant"
+curr_dir = os.path.dirname(os.getcwd())
+file_to_read = "setting_1_chamberlin_courant_tie_breaking_rand_voter_10_cand_5_committee_size_3_iter_50000_avg_20.json"
+output_path = os.path.join(curr_dir + "/numerical_results/" + voting_rule + "/", file_to_read)
+print(output_path)
 
-file_to_read = "setting_1_approval_tie_breaking_rand_approval_count_2_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
-preferences, run_setting = get_preferences(file_to_read, "approval")
+
+read_result = read_results(output_path)
+run_setting = read_result.get_run_setting()
+preferences = read_result.get_preferences()
+rewards = read_result.get_rewards()
+
 num_voters = run_setting["num_voters"]
 voting_setting = run_setting["voting_setting"]
 committee_size = run_setting["committee_size"]
@@ -45,9 +54,11 @@ end_interval = iterations - iterations
 def kt_distance(preference_dict_t, preference_dict_t_n, num_voters):
 	total_kt = 0
 	for voter in range(num_voters):
-		res = stats.kendalltau(preference_dict_t[str(voter)], preference_dict_t_n[str(voter)])
-		total_kt += res.statistic       # res.statistic closer to 1 then it implies strong positive ordinal correlation, 0 implies weak ordinal correlation, -1 implies strong negative ordinal correlation
-		
+		if voting_rule == "plurality" or voting_rule == 'anti_plurality':
+			total_kt += 0 if preference_dict_t[str(voter)] != preference_dict_t_n[str(voter)] else 1
+		else:
+			res = stats.kendalltau(preference_dict_t[str(voter)], preference_dict_t_n[str(voter)])
+			total_kt += res.statistic       # res.statistic closer to 1 then it implies strong positive ordinal correlation, 0 implies weak ordinal correlation, -1 implies strong negative ordinal correlation
 	return total_kt/num_voters
 
 
@@ -57,7 +68,6 @@ def sliding_kt_distance(t):
 		# print(test)
 		kt_dict[test] = []
 		avg_run_kt = [0]*window_size
-		kt = 0
 		for run in preferences[test].keys():
 			curr_pref = preferences[test][run][abs(t - window_size) : t]
 			kt_iters = []
@@ -73,6 +83,7 @@ def sliding_kt_distance(t):
 	return kt_dict
 
 
+# calculate the average KT distance between preferences of voters in given itervals
 for i in range(iterations, end_interval, -window_size):
 	print(i)
 	kt_dict = sliding_kt_distance(i)
@@ -83,7 +94,6 @@ for i in range(iterations, end_interval, -window_size):
 		for test in kt_dict.keys():
 			kt_dict_interval[test].append(kt_dict[test])
 	
-
 plot = plt.figure()
 
 for test in kt_dict_interval.keys():
@@ -108,6 +118,44 @@ graph_path = os.path.join(curr_dir + "/graph_results/" + voting_rule + "/", grap
 plt.savefig(graph_path)
 
 
+def cost_of_strategy():
+	cost_dict = {}
+	for test in rewards.keys():
+		cost_dict[test] = []
+		avg_run_cost = [0]*iterations
+		for run in rewards[test].keys():
+			true_reward = rewards[test][run][0]
+			for iter in range(iterations):
+				#get the difference between 0th borda score and nth borda score
+				avg_run_cost[iter] += (true_reward - rewards[test][run][iter])
+		for iter in range(iterations):
+			avg_run_cost[iter] /= avg_runs
+		cost_dict[test] = avg_run_cost
+	return cost_dict
 
-# get kt dist over 0-50000 iters, tie breaking using disctioanry order
-# July 29 - 14, next meet 16
+
+# plot cost of strgategy
+cost_of_strategy_dict = cost_of_strategy()
+
+plot = plt.figure()
+
+for test in cost_of_strategy_dict.keys():
+    plt.plot(range(iterations), cost_of_strategy_dict[test], label=test)
+
+curr_dir = os.path.dirname(os.getcwd())
+os.makedirs(curr_dir + "/numerical_results/" + voting_rule, exist_ok=True)
+os.makedirs(curr_dir + "/graph_results/" + voting_rule, exist_ok=True)
+
+plt.legend(loc='upper right')
+plt.xlabel("Number of iterations")
+plt.ylabel("Avg cost of strategy - ")
+plt.show()
+if voting_rule == "approval":
+	graph_file = 'cost_of_strategy_setting_{}_{}_tie_breaking_{}_approval_count_{}_voter_'.format(voting_setting, voting_rule, tie_breaking_rule, approval_count) + str(num_voters) + '_cand_' + str(num_candidates) + \
+                "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'
+else:
+	graph_file = 'cost_of_strategy_setting_{}_{}_tie_breaking_{}_voter_'.format(voting_setting, voting_rule, tie_breaking_rule) + str(num_voters) + '_cand_' + str(num_candidates) + \
+                "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'
+graph_path = os.path.join(curr_dir + "/graph_results/" + voting_rule + "/", graph_file)
+
+plt.savefig(graph_path)

@@ -32,18 +32,15 @@ class model():
             self.exploit += 1
 
         else:   # return the top ballot based on random selection of voting profile
-            if voting_rule == 'plurality':
+            if voting_rule == 'plurality' or voting_rule == 'anti_plurality':
                 top_ballot = random.choice(list(range(self.num_candidates)))
-
-            elif voting_rule == 'borda' or voting_rule == 'borda_top_cand':
-                top_ballot = random.choice(self.full_preferences)
-
-            elif voting_rule == 'copeland':
-                top_ballot = random.choice(self.full_preferences)
 
             elif voting_rule == 'approval':
                 ones_indices_combinations = random.choice(self.all_approval_ballots)
                 top_ballot = [1 if i in ones_indices_combinations else 0 for i in range(self.num_candidates)]
+
+            else: # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant:
+                top_ballot = random.choice(self.full_preferences)
 
             self.explore += 1
 

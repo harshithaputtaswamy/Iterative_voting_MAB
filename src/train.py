@@ -2,6 +2,7 @@ import json
 import copy
 import random
 import numpy as np
+from ilp_utils import chamberlin_courant_borda_utility
 from itertools import permutations, combinations
 
 
@@ -9,10 +10,10 @@ class train_model():
     def __init__(self, agent, iterations, batch, committee_size, voting_rule, tie_breaking_rule, voting_setting, parsed_soc_data, epsilon, grad_epsilon, epsilon_final, epsilon_decay, approval_count=0):
         self.agent = agent
         self.parsed_soc_data = parsed_soc_data
-        self.num_candidates = parsed_soc_data["num_candidates"]
-        self.num_voters = parsed_soc_data["num_voters"]
-        self.flattened_voting_profile = parsed_soc_data["flattened_voting_profile"]
-        self.full_voting_profile = parsed_soc_data["full_voting_profile"]
+        self.num_candidates = parsed_soc_data['num_candidates']
+        self.num_voters = parsed_soc_data['num_voters']
+        self.flattened_voting_profile = parsed_soc_data['flattened_voting_profile']
+        self.full_voting_profile = parsed_soc_data['full_voting_profile']
 
         self.iterations = iterations
         self.batch = batch
@@ -158,7 +159,7 @@ class train_model():
         '''
         winning_committee = None
 
-        if self.tie_breaking_rule == "dict":
+        if self.tie_breaking_rule == 'dict':
             for i in range(len(winning_committee_list[0])):
                 curr_max = -1
                 for j in range(len((winning_committee_list))):
@@ -167,7 +168,7 @@ class train_model():
                         winning_committee = winning_committee_list[j]
                 if winning_committee:
                     break
-        elif self.tie_breaking_rule == "rand":
+        elif self.tie_breaking_rule == 'rand':
             winning_committee = random.choice(winning_committee_list)
         # print(winning_committee)
 
@@ -190,6 +191,39 @@ class train_model():
         # print(winning_committee)
 
         return winning_committee
+    
+
+    def compute_k_plurality_winner(self, voter_ballot_iter):
+        voter_preferences = voter_ballot_iter.values()
+        candidate_votes = {}
+
+        for cand in voter_preferences:
+            if cand in candidate_votes:
+                candidate_votes[cand] += 1
+            else:
+                candidate_votes[cand] = 1
+
+        winning_committee = sorted(candidate_votes, key = candidate_votes.get, reverse=True)[:self.committee_size]
+        return winning_committee
+    
+
+    def compute_k_anti_plurality_winner(self, voter_ballot_iter):
+        voter_preferences = voter_ballot_iter.values()
+        candidate_votes = {}
+
+        for cand in voter_preferences:
+            if cand in candidate_votes:
+                candidate_votes[cand] += 1
+            else:
+                candidate_votes[cand] = 1
+
+        winning_committee = sorted(candidate_votes, key = candidate_votes.get, reverse=False)[:self.committee_size]
+        return winning_committee
+    
+
+    def compute_k_chamberlin_courant_winner(self, voter_ballot_iter):
+        winning_committee = chamberlin_courant_borda_utility(voter_ballot_iter, self.committee_size)
+        return winning_committee
 
 
     def compute_winner(self, voter_ballot_iter):
@@ -198,8 +232,14 @@ class train_model():
             if self.voting_rule == 'approval':
                 winner, num_ties = self.compute_committee_approval_winner(voter_ballot_iter)
                 return winner, num_ties
+            elif self.voting_rule == 'plurality':
+                winner = self.compute_k_plurality_winner(voter_ballot_iter)
+            elif self.voting_rule == 'anti_plurality':
+                winner = self.compute_k_anti_plurality_winner(voter_ballot_iter)
             elif self.voting_rule == 'borda' or self.voting_rule == 'borda_top_cand':
                 winner = self.compute_k_borda_winner(voter_ballot_iter)
+            elif self.voting_rule == 'chamberlin_courant':
+                winner = self.compute_k_chamberlin_courant_winner(voter_ballot_iter)
 
         else:                           # single winner setting
             if self.voting_rule == 'plurality':
@@ -216,47 +256,71 @@ class train_model():
     def compute_welfare(self, voter_ballot_iter, winner):
 
         welfare_dict = {x:0 for x in range(self.num_voters)}
-
-        if self.voting_setting == 0:    # single winner setting, comupte welfare using borda utility
+        
+        # single winner setting, comupte welfare using borda utility
+        if self.voting_setting == 0:
             for voter in range(self.num_voters):
                 actual_voter_ballot = self.full_voting_profile[voter]
                 welfare_dict[voter] = self.welfare_scoring_vector[actual_voter_ballot.index(winner)] # compute the score for the winner using scoring vector and voter i's preferences
-
-        else:                           # committee voting setting
-            if self.voting_rule == 'approval':      # welfare rule for k-approval - if the chosen candidate is approved by the voter, the welfare of the voter will be 1 else 0
+        
+        # committee voting setting
+        else:
+            # welfare rule for k-approval - if the chosen candidate is approved by the voter, the welfare of the voter will be 1 else 0
+            if self.voting_rule == 'approval':
                 for voter in range(self.num_voters):
                     actual_voter_ballot = self.full_voting_profile[voter][:self.approval_count]
                     for cand in actual_voter_ballot:
                         if cand in winner:
                             welfare_dict[voter] = 1
                             break
-            elif self.voting_rule == 'borda':     # welfare rule for k-borda - compute the cummulative borda scores for the chosen candidate in the ranked preference
+            
+            # welfare rule for k-borda - compute the cummulative borda scores for the chosen candidate in the ranked preference
+            elif self.voting_rule == 'borda':
                 for voter in range(self.num_voters):
                     actual_voter_ballot = self.full_voting_profile[voter]
                     for cand in winner:
                         welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
-            elif self.voting_rule == 'borda_top_cand':     # welfare rule - compute the borda score for the highest ranked (highest borda score) candidate in the committee
+            
+            # welfare rule for borda top cand - compute the borda score for the highest ranked (highest borda score) candidate in the committee
+            elif self.voting_rule == 'borda_top_cand':
                 for voter in range(self.num_voters):
                     actual_voter_ballot = self.full_voting_profile[voter]
                     welfare_dict[voter] = self.welfare_scoring_vector[actual_voter_ballot.index(winner[0])]
+            
+            # welfare rule for k-plurality - if top cand in actual voter ballot is part of winning committiee voter will get score 1 else 0
+            elif self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
+                for voter in range(self.num_voters):
+                    actual_top_cand = self.full_voting_profile[voter][0]
+                    if actual_top_cand in winner:
+                        welfare_dict[voter] = 1
+
+                    # with borda utility score
+                    # actual_voter_ballot = self.full_voting_profile[voter]
+                    # for cand in winner:
+                    #     welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
+            
+            # welfare rule for chamberlin_courant: compute the cummulative borda scores for the chosen candidate in the ranked preference
+            elif self.voting_rule == 'chamberlin_courant':
+                for voter in range(self.num_voters):
+                    actual_voter_ballot = self.full_voting_profile[voter]
+                    for cand in winner:
+                        welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
         return welfare_dict
 
 
     def update_rewards(self, voter_ballot_dict, voter_ballot_iter, welfare_dict):
-        # update reward and count in voter_ballot_dict for every voter and the "arm" they pick with the welfare, i.e., reward in the current iteration
+        # update reward and count in voter_ballot_dict for every voter and the 'arm' they pick with the welfare, i.e., reward in the current iteration
         for voter in voter_ballot_iter.keys():
-            if self.voting_rule == "plurality":
+            if self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
                 ballot = voter_ballot_iter[voter]
-            elif self.voting_rule == "approval":
+            elif self.voting_rule == 'approval':
                 ballot = tuple(voter_ballot_iter[voter])
-            elif self.voting_rule == "borda" or self.voting_rule == 'borda_top_cand':
-                ballot = tuple(voter_ballot_iter[voter])
-            elif self.voting_rule == 'copeland':
+            else: # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant:
                 ballot = tuple(voter_ballot_iter[voter])
 
-            voter_ballot_dict[voter]["count"][ballot] += 1
-            voter_ballot_dict[voter]["reward"][ballot] = (voter_ballot_dict[voter]["reward"][ballot] + welfare_dict[voter])
-            # print("came ", voter_ballot_dict[voter]["reward"][ballot])
+            voter_ballot_dict[voter]['count'][ballot] += 1
+            voter_ballot_dict[voter]['reward'][ballot] = (voter_ballot_dict[voter]['reward'][ballot] + welfare_dict[voter])
+            # print('came ', voter_ballot_dict[voter]['reward'][ballot])
         return voter_ballot_dict
 
 
@@ -278,55 +342,50 @@ class train_model():
 
         for voter in range(self.num_voters):
             voter_ballot_dict[voter] = {}
-            voter_ballot_dict[voter]["reward"] = {}
-            voter_ballot_dict[voter]["count"] = {}
+            voter_ballot_dict[voter]['reward'] = {}
+            voter_ballot_dict[voter]['count'] = {}
 
-            if self.voting_rule == 'plurality':
+            if self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
                 for cand in range(self.num_candidates):
-                    voter_ballot_dict[voter]["reward"][cand] = 0
-                    voter_ballot_dict[voter]["count"][cand] = 0
+                    voter_ballot_dict[voter]['reward'][cand] = 0
+                    voter_ballot_dict[voter]['count'][cand] = 0
 
             elif self.voting_rule == 'approval':
                 for comb in self.all_approval_combinations:
-                    voter_ballot_dict[voter]["reward"][tuple(comb)] = 0
-                    voter_ballot_dict[voter]["count"][tuple(comb)] = 0
+                    voter_ballot_dict[voter]['reward'][tuple(comb)] = 0
+                    voter_ballot_dict[voter]['count'][tuple(comb)] = 0
 
-            elif self.voting_rule == 'borda' or self.voting_rule == 'borda_top_cand':
+            # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant:
+            else:
                 for cand in list(permutations(range(self.num_candidates))):
-                    voter_ballot_dict[voter]["reward"][tuple(cand)] = 0
-                    voter_ballot_dict[voter]["count"][tuple(cand)] = 0
-
-            elif self.voting_rule == 'copeland':
-                for cand in list(permutations(range(self.num_candidates))):
-                    voter_ballot_dict[voter]["reward"][tuple(cand)] = 0
-                    voter_ballot_dict[voter]["count"][tuple(cand)] = 0
+                    voter_ballot_dict[voter]['reward'][tuple(cand)] = 0
+                    voter_ballot_dict[voter]['count'][tuple(cand)] = 0
 
         # for 0th iteration
         voter_ballot_iter = {}        # dictionary containing voter and their corresponding ballot
 
         for voter_i in range(self.num_voters):
-            if self.voting_rule == 'plurality':
+            if self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
                 cand = self.full_voting_profile[voter_i][0]  # initialy asign this dictionary with true top candidate of voters
-            elif self.voting_rule == 'borda' or self.voting_rule == 'borda_top_cand':
-                cand = tuple(self.full_voting_profile[voter_i])  # initialy asign this dictionary with true preferences of voters
-            elif self.voting_rule == 'copeland':
-                cand = tuple(self.full_voting_profile[voter_i])
             elif self.voting_rule == 'approval':
                 cand = [0]*self.num_candidates
                 for c in self.full_voting_profile[voter_i][ : self.approval_count]:  # true approval vector of voters, first k cands get 1 and rest 0
                     cand[c] = 1
                 cand = tuple(cand)
+            else: # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant:
+                cand = tuple(self.full_voting_profile[voter_i])  # initialy asign this dictionary with true preferences of voters
             
             voter_ballot_iter[voter_i] = cand
         
         voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
         voter_ballot_iter_list.append(voter_ballot_iter_dict)
 
-        if self.voting_setting == 1 and self.voting_rule == "approval":
+        if self.voting_setting == 1 and self.voting_rule == 'approval':
             winning_candidate, num_ties = self.compute_winner(voter_ballot_iter)
             num_ties_list.append(num_ties)
         else:
             winning_candidate = self.compute_winner(voter_ballot_iter)
+        
         iter_winners_list.append(winning_candidate)
 
         welfare_dict = self.compute_welfare(voter_ballot_iter, winning_candidate)
@@ -334,17 +393,15 @@ class train_model():
 
         winning_borda_score = 0
         for voter in range(self.num_voters):
-            if self.voting_rule == "plurality":
+            if self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
                 ballot_iter = voter_ballot_iter[voter]
-            elif self.voting_rule == "approval":
+            elif self.voting_rule == 'approval':
                 ballot_iter = tuple(voter_ballot_iter[voter])
-            elif self.voting_rule == "borda" or self.voting_rule == 'borda_top_cand':
-                ballot_iter = tuple(voter_ballot_iter[voter])
-            elif self.voting_rule == "copeland":
+            else: # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant:
                 ballot_iter = tuple(voter_ballot_iter[voter])
 
-            if (voter_ballot_dict[voter]["count"][ballot_iter]):
-                winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
+            if (voter_ballot_dict[voter]['count'][ballot_iter]):
+                winning_borda_score += voter_ballot_dict[voter]['reward'][ballot_iter] / voter_ballot_dict[voter]['count'][ballot_iter]
 
         borda_scores_arr.append(winning_borda_score)
         welfare_dict_list.append(welfare_dict)
@@ -363,7 +420,7 @@ class train_model():
             voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
             voter_ballot_iter_list.append(voter_ballot_iter_dict)
 
-            if self.voting_setting == 1 and self.voting_rule == "approval":
+            if self.voting_setting == 1 and self.voting_rule == 'approval':
                 winning_candidate, num_ties = self.compute_winner(voter_ballot_iter)
                 num_ties_list.append(num_ties)
             else:
@@ -377,28 +434,27 @@ class train_model():
             winning_borda_score = 0
             # compute the sum of rewards experienced by the voters fot this winning candidate
             for voter in range(self.num_voters):
-                if self.voting_rule == "plurality":
+                if self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
                     ballot_iter = voter_ballot_iter[voter]
-                elif self.voting_rule == "approval":
+                elif self.voting_rule == 'approval':
                     ballot_iter = tuple(voter_ballot_iter[voter])
-                elif self.voting_rule == "borda" or self.voting_rule == 'borda_top_cand':
+                else: # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant:
                     ballot_iter = tuple(voter_ballot_iter[voter])
-                elif self.voting_rule == "copeland":
-                    ballot_iter = tuple(voter_ballot_iter[voter])
-                # highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
-                if (voter_ballot_dict[voter]["count"][ballot_iter]):
-                    winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
+
+                # highest_reward_cand = max(voter_ballot_dict[voter]['reward'], key=voter_ballot_dict[voter]['reward'].get)
+                if (voter_ballot_dict[voter]['count'][ballot_iter]):
+                    winning_borda_score += voter_ballot_dict[voter]['reward'][ballot_iter] / voter_ballot_dict[voter]['count'][ballot_iter]
             borda_scores_arr.append(winning_borda_score)
             welfare_dict_list.append(welfare_dict)
         
         # Get the results for explotation in last iteration
         for voter in range(self.num_voters):
             curr_reward = {}
-            for cand in voter_ballot_dict[voter]["reward"].keys():
-                if voter_ballot_dict[voter]["count"][cand] > 0:
-                    curr_reward[cand] = voter_ballot_dict[voter]["reward"][cand] / voter_ballot_dict[voter]["count"][cand]
+            for cand in voter_ballot_dict[voter]['reward'].keys():
+                if voter_ballot_dict[voter]['count'][cand] > 0:
+                    curr_reward[cand] = voter_ballot_dict[voter]['reward'][cand] / voter_ballot_dict[voter]['count'][cand]
                 else:
-                    curr_reward[cand] = voter_ballot_dict[voter]["reward"][cand]
+                    curr_reward[cand] = voter_ballot_dict[voter]['reward'][cand]
             max_reward = max(curr_reward.values())
             top_ballot_list = list(filter(lambda x: curr_reward[x] == max_reward, curr_reward))
             top_ballot = random.choice(top_ballot_list)
@@ -408,7 +464,7 @@ class train_model():
         voter_ballot_iter_dict = copy.deepcopy(voter_ballot_iter)
         voter_ballot_iter_list.append(voter_ballot_iter)
 
-        if self.voting_setting == 1 and self.voting_rule == "approval":
+        if self.voting_setting == 1 and self.voting_rule == 'approval':
             winning_candidate, num_ties = self.compute_winner(voter_ballot_iter)
             num_ties_list.append(num_ties)
         else:
@@ -422,17 +478,16 @@ class train_model():
         winning_borda_score = 0
         # compute the sum of rewards experienced by the voters fot this winning candidate
         for voter in range(self.num_voters):
-            if self.voting_rule == "plurality":
+            if self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
                 ballot_iter = voter_ballot_iter[voter]
-            elif self.voting_rule == "approval":
+            elif self.voting_rule == 'approval':
                 ballot_iter = tuple(voter_ballot_iter[voter])
-            elif self.voting_rule == "borda" or self.voting_rule == 'borda_top_cand':
+            else: # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant:
                 ballot_iter = tuple(voter_ballot_iter[voter])
-            elif self.voting_rule == "copeland":
-                ballot_iter = tuple(voter_ballot_iter[voter])
-            # highest_reward_cand = max(voter_ballot_dict[voter]["reward"], key=voter_ballot_dict[voter]["reward"].get)
-            if (voter_ballot_dict[voter]["count"][ballot_iter]):
-                winning_borda_score += voter_ballot_dict[voter]["reward"][ballot_iter] / voter_ballot_dict[voter]["count"][ballot_iter]
+
+            # highest_reward_cand = max(voter_ballot_dict[voter]['reward'], key=voter_ballot_dict[voter]['reward'].get)
+            if (voter_ballot_dict[voter]['count'][ballot_iter]):
+                winning_borda_score += voter_ballot_dict[voter]['reward'][ballot_iter] / voter_ballot_dict[voter]['count'][ballot_iter]
         
         borda_scores_arr.append(winning_borda_score)
         welfare_dict_list.append(welfare_dict)

@@ -33,6 +33,7 @@ def process_soc_data(num_voters, num_candidates, generate_data, input_data_file 
     # print(borda_scores(instance))
 
     return res_dict
+    
 
 # process_soc_data(False, "/home/harshitha/fstore/harshitha/soc/00004-00000004.soc", "parsed_soc_data.json")   #to read data from pre existing file
   #to generate data using populate_IC function
