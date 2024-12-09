@@ -38,7 +38,11 @@ tie_breaking_rule = "rand"
 # tie_breaking_rule = "dict"
 
 
-voting_rule = "chamberlin_courant"
+# voting_rule = "stv"
+voting_rule = "pav"
+# voting_rule = "bloc"
+# voting_rule = "monroe"
+# voting_rule = "chamberlin_courant"
 # voting_rule = "plurality"
 # voting_rule = "anti_plurality"
 # voting_rule = "borda"
@@ -47,10 +51,13 @@ voting_rule = "chamberlin_courant"
 # voting_rule = "copeland"
 
 
-avg_runs = 20
+avg_runs = 50
 iterations = 50000
-batch = 1000
+batch = 500
 
+# avg_runs = 1
+# iterations = 10
+# batch = 1
 
 # create dictionary to save the monotonicity results of different test configs
 monotonicity_check = {}
@@ -162,7 +169,7 @@ for committee_size in committee_size_list:
 
     plt.legend(loc='upper right')
     plt.xlabel("Number of iterations")
-    plt.ylabel("Avg Borda Score with {}".format(voting_rule))
+    plt.ylabel("Avg Score with {}".format(voting_rule))
     # plt.ylim(0, actual_highest_vote_per_approval + 1)
     plt.show()
     if voting_rule == "approval":

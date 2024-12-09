@@ -17,7 +17,8 @@ class model():
         self.all_approval_ballots = list(combinations(range(self.num_candidates), approval_count))
 
     # implement epsilon greedy method to return the top ballot of the voter and the submitted voter preference
-    def epsilon_greedy_voting(self, voter_ballot_dict, voting_rule, voting_setting, grad_epsilon, epsilon_final, epsilon_decay, approval_count = 0):
+    def epsilon_greedy_voting(self, voter_ballot_dict, voting_rule, voting_setting, grad_epsilon, epsilon_final, 
+                              epsilon_decay, approval_count = 0):
 
         if np.random.random() > self.epsilon:   # expliotation
             curr_reward = {}

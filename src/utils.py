@@ -24,9 +24,9 @@ def get_borda_score(curr_voting_profile, num_alternatives):
 
 
 
-voting_rule = "chamberlin_courant"
+voting_rule = "pav"
 curr_dir = os.path.dirname(os.getcwd())
-file_to_read = "setting_1_chamberlin_courant_tie_breaking_rand_voter_10_cand_5_committee_size_3_iter_50000_avg_20.json"
+file_to_read = "setting_1_pav_tie_breaking_rand_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
 output_path = os.path.join(curr_dir + "/numerical_results/" + voting_rule + "/", file_to_read)
 print(output_path)
 
@@ -58,7 +58,8 @@ def kt_distance(preference_dict_t, preference_dict_t_n, num_voters):
 			total_kt += 0 if preference_dict_t[str(voter)] != preference_dict_t_n[str(voter)] else 1
 		else:
 			res = stats.kendalltau(preference_dict_t[str(voter)], preference_dict_t_n[str(voter)])
-			total_kt += res.statistic       # res.statistic closer to 1 then it implies strong positive ordinal correlation, 0 implies weak ordinal correlation, -1 implies strong negative ordinal correlation
+			total_kt += res.statistic       # res.statistic closer to 1 then it implies strong positive 
+			# ordinal correlation, 0 implies weak ordinal correlation, -1 implies strong negative ordinal correlation
 	return total_kt/num_voters
 
 
