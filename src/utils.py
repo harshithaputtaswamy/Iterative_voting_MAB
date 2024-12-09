@@ -24,9 +24,9 @@ def get_borda_score(curr_voting_profile, num_alternatives):
 
 
 
-voting_rule = "pav"
+voting_rule = "borda"
 curr_dir = os.path.dirname(os.getcwd())
-file_to_read = "setting_1_pav_tie_breaking_rand_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
+file_to_read = "setting_1_borda_tie_breaking_rand_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
 output_path = os.path.join(curr_dir + "/numerical_results/" + voting_rule + "/", file_to_read)
 print(output_path)
 

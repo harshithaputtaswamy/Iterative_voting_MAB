@@ -108,7 +108,6 @@ for voting_rule_type in voting_rules_list_dict.keys():
 		data_series = pd.Series(kt_dict_interval[voting_rule])
 		smoothed_data = data_series.rolling(window=100, min_periods=1).mean()
 		plt.plot(range(iterations - 1, end_interval, -window_size), smoothed_data, label=voting_rule)
-		# plt.plot(range(iterations - 1, end_interval, -window_size), kt_dict_interval[voting_rule], label=voting_rule)
 
 	curr_dir = os.path.dirname(os.getcwd())
 	os.makedirs(curr_dir + "/graph_results/{}/".format(voting_rule_type), exist_ok=True)
@@ -149,11 +148,8 @@ for voting_rule_type in voting_rules_list_dict.keys():
 
 	for test in cost_of_strategy_dict.keys():
 		data_series = pd.Series(cost_of_strategy_dict[test])
-		# Apply rolling mean with the specified window size
 		smoothed_data = data_series.rolling(window=100, min_periods=1).mean()
-		# Plot the smoothed curve
 		plt.plot(range(len(smoothed_data)), smoothed_data, label=test)
-			# plt.plot(range(iterations), cost_of_strategy_dict[test], label=test)
 
 	curr_dir = os.path.dirname(os.getcwd())
 	os.makedirs(curr_dir + "/graph_results/{}/".format(voting_rule_type), exist_ok=True)
