@@ -45,9 +45,9 @@ tie_breaking_rule = "rand"
 # voting_rule = "chamberlin_courant"
 # voting_rule = "plurality"
 # voting_rule = "anti_plurality"
-voting_rule = "borda"
+# voting_rule = "borda"
 # voting_rule = "borda_top_cand"
-# voting_rule = "approval"
+voting_rule = "approval"
 # voting_rule = "copeland"
 
 

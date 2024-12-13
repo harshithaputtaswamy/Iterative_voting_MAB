@@ -51,6 +51,9 @@ class read_results():
 
     def get_run_setting(self):
         return self.run_setting
+    
+    def get_avg_score_graph_coords(self):
+        return self.result["graph_coords"]
 
 
     def get_preferences(self):

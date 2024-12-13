@@ -338,78 +338,90 @@ class train_model():
         
         # committee voting setting
         else:
-            # welfare rule for k-approval - if the chosen candidate is approved by the voter, 
-            # the welfare of the voter will be 1 else 0
-            if self.voting_rule == 'approval':
-                for voter in range(self.num_voters):
-                    actual_voter_ballot = self.full_voting_profile[voter][:self.approval_count]
-                    for cand in actual_voter_ballot:
-                        if cand in winner:
-                            welfare_dict[voter] = 1
-                            break
+            for voter in range(self.num_voters):
+                actual_voter_ballot = self.full_voting_profile[voter]
+                for cand in winner:
+                    welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
+        
+            # # welfare rule for k-approval - if the chosen candidate is approved by the voter, 
+            # # the welfare of the voter will be cummulative borda scores
+            # if self.voting_rule == 'approval':
+            #     for voter in range(self.num_voters):
+            #         actual_voter_ballot = self.full_voting_profile[voter][:self.approval_count]
+            #         for cand in actual_voter_ballot:
+            #             if cand in winner:
+            #                 welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
             
-            # welfare rule for k-borda - compute the cummulative borda scores for the chosen candidate in the ranked preference
-            elif self.voting_rule == 'borda':
-                for voter in range(self.num_voters):
-                    actual_voter_ballot = self.full_voting_profile[voter]
-                    for cand in winner:
-                        welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
+            # # welfare rule for k-borda - compute the cummulative borda scores for the chosen candidate in the ranked preference
+            # elif self.voting_rule == 'borda':
+            #     for voter in range(self.num_voters):
+            #         actual_voter_ballot = self.full_voting_profile[voter]
+            #         for cand in winner:
+            #             welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
             
             # welfare rule for borda top cand - compute the borda score for the highest ranked 
             # (highest borda score) candidate in the committee
-            elif self.voting_rule == 'borda_top_cand':
-                for voter in range(self.num_voters):
-                    actual_voter_ballot = self.full_voting_profile[voter]
-                    welfare_dict[voter] = self.welfare_scoring_vector[actual_voter_ballot.index(winner[0])]
+            # elif self.voting_rule == 'borda_top_cand':
+            #     for voter in range(self.num_voters):
+            #         actual_voter_ballot = self.full_voting_profile[voter]
+            #         welfare_dict[voter] = self.welfare_scoring_vector[actual_voter_ballot.index(winner[0])]
             
-            # welfare rule for k-plurality - if top cand in actual voter ballot is part of winning committiee
-            #  voter will get score 1 else 0
-            elif self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
-                for voter in range(self.num_voters):
-                    actual_top_cand = self.full_voting_profile[voter][0]
-                    if actual_top_cand in winner:
-                        welfare_dict[voter] = 1
+            # # welfare rule for k-plurality - if top cand in actual voter ballot is part of winning committiee
+            # #  voter will get score 1 else 0
+            # elif self.voting_rule == 'plurality' or self.voting_rule == 'anti_plurality':
+            #     for voter in range(self.num_voters):
+            #         # actual_top_cand = self.full_voting_profile[voter][0]
+            #         # if actual_top_cand in winner:
+            #         #     welfare_dict[voter] = 1
 
-                    # with borda utility score
-                    # actual_voter_ballot = self.full_voting_profile[voter]
-                    # for cand in winner:
-                    #     welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
+            #         # with borda utility score
+            #         actual_voter_ballot = self.full_voting_profile[voter]
+            #         actual_top_cand = actual_voter_ballot[0]
+            #         if actual_top_cand in winner:
+            #             welfare_dict[voter] = self.welfare_scoring_vector[actual_voter_ballot.index(actual_top_cand)]
             
-            # welfare rule for chamberlin_courant: compute the cummulative borda scores 
-            # for the chosen candidate in the ranked preference
-            elif self.voting_rule == 'chamberlin_courant':
-                for voter in range(self.num_voters):
-                    actual_voter_ballot = self.full_voting_profile[voter]
-                    for cand in winner:
-                        welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
+            # # welfare rule for chamberlin_courant: compute the cummulative borda scores 
+            # # for the chosen candidate in the ranked preference
+            # elif self.voting_rule == 'chamberlin_courant':
+            #     for voter in range(self.num_voters):
+            #         actual_voter_ballot = self.full_voting_profile[voter]
+            #         for cand in winner:
+            #             welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
         
-            # welfare rule for bloc: compute the total plurality score for all the candidates in the committee
-            elif self.voting_rule == 'bloc':
-                for voter in range(self.num_voters):
-                    actual_voter_ballot = self.full_voting_profile[voter]
-                    for cand in winner:
-                        if cand in actual_voter_ballot[:self.committee_size]:
-                            welfare_dict[voter] += 1
+            # # welfare rule for bloc: compute the total plurality score for all the candidates in the committee
+            # elif self.voting_rule == 'bloc':
+            #     for voter in range(self.num_voters):
+            #         actual_voter_ballot = self.full_voting_profile[voter]
+            #         for cand in winner:
+            #             if cand in actual_voter_ballot[:self.committee_size]:
+            #                 welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
             
-            # welfare rule for monroe: compute the cummulative borda scores for the chosen candidate in the ranked preference
-            elif self.voting_rule == 'monroe':
-                for voter in range(self.num_voters):
-                    actual_voter_ballot = self.full_voting_profile[voter]
-                    for cand in winner:
-                        welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
+            # # welfare rule for monroe: compute the cummulative borda scores for the chosen candidate in the ranked preference
+            # elif self.voting_rule == 'monroe':
+            #     for voter in range(self.num_voters):
+            #         actual_voter_ballot = self.full_voting_profile[voter]
+            #         for cand in winner:
+            #             welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
         
-            elif self.voting_rule == 'stv':
-                for voter in range(self.num_voters):
-                    actual_voter_ballot = self.full_voting_profile[voter]
-                    if actual_voter_ballot[0] in winner:
-                        welfare_dict[voter] = self.welfare_scoring_vector[actual_voter_ballot.index(actual_voter_ballot[0])]
+            # elif self.voting_rule == 'stv':
+            #     for voter in range(self.num_voters):
+            #         actual_top_cand = self.full_voting_profile[voter][0]
+            #         if actual_top_cand in winner:
+            #             welfare_dict[voter] = self.welfare_scoring_vector[actual_voter_ballot.index(actual_top_cand)]
 
-            elif self.voting_rule == 'pav':
-                for voter in range(self.num_voters):
-                    actual_voter_ballot = self.full_voting_profile[voter][:self.approval_count]
-                    for cand in actual_voter_ballot:
-                        if cand in winner:
-                            welfare_dict[voter] += 1
+            # elif self.voting_rule == 'pav':
+            #     for voter in range(self.num_voters):
+            #         actual_voter_ballot = self.full_voting_profile[voter][:self.approval_count]
+            #         for cand in actual_voter_ballot:
+            #             if cand in winner:
+            #                 welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
+            
+            # else:
+            #     for voter in range(self.num_voters):
+            #         actual_voter_ballot = self.full_voting_profile[voter]
+            #         for cand in winner:
+            #             welfare_dict[voter] += self.welfare_scoring_vector[actual_voter_ballot.index(cand)]
+        
         return welfare_dict
 
 
@@ -460,7 +472,7 @@ class train_model():
                     voter_ballot_dict[voter]['reward'][tuple(comb)] = 0
                     voter_ballot_dict[voter]['count'][tuple(comb)] = 0
 
-            # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant' or 'bloc':
+            # self.voting_rule == 'borda' or 'borda_top_cand' or 'copeland' or 'chamberlin_courant' or 'bloc' or 'pav' or 'stv':
             else:
                 for cand in list(permutations(range(self.num_candidates))):
                     voter_ballot_dict[voter]['reward'][tuple(cand)] = 0
@@ -507,7 +519,7 @@ class train_model():
 
             if (voter_ballot_dict[voter]['count'][ballot_iter]):
                 winning_borda_score += voter_ballot_dict[voter]['reward'][ballot_iter] / voter_ballot_dict[voter]['count'][ballot_iter]
-
+        print(winning_borda_score, winning_candidate)
         borda_scores_arr.append(winning_borda_score)
         welfare_dict_list.append(welfare_dict)
 

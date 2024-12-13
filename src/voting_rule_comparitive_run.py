@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import pandas as pd
 import numpy as np
 from model import model
 from train import train_model
@@ -51,8 +52,8 @@ avg_runs = 50
 iterations = 50000
 batch = 1000
 
-# avg_runs = 1
-# iterations = 1000
+# avg_runs = 10
+# iterations = 10000
 # batch = 1
 
 
@@ -78,9 +79,35 @@ for i in range(avg_runs):
 # get the parent directry and write create subdirectries for different runs
 curr_dir = os.path.dirname(os.getcwd())
 
+voting_rules_labels = {
+    "borda" : r"$Borda_S$", 
+    "borda_top_cand" : r"$Borda Top Cand_S$", 
+    "chamberlin_courant" : r"$\beta-CC_S$", 
+    "monroe" : r"$Monroe_S$", 
+    "stv" : r"$STV_S$", 
+    "pav" : r"$PAV_S$", 
+    "bloc" : r"$Bloc_S$",
+    "approval" : r"$Approval_S$",
+    "plurality" : r"$Plurality_S$",
+    "anti_plurality" : r"$Anti-Plurality_S$",
+    "true_borda" : r"$Borda_T$", 
+    "true_borda_top_cand" : r"$Borda Top Cand_T$", 
+    "true_chamberlin_courant" : r"$\beta-CC_T$", 
+    "true_monroe" : r"$Monroe_T$", 
+    "true_stv" : r"$STV_T$", 
+    "true_pav" : r"$PAV_T$", 
+    "true_bloc" : r"$Bloc_T$",
+    "true_approval" : r"$Approval_T$",
+    "true_plurality" : r"$Plurality_T$",
+    "true_anti_plurality" : r"$Anti-Plurality_T$"
+}
+
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2']
+
 voting_rules_list_dict = {
-    "score_based_rules_comp_study" : ["borda", "borda_top_cand", "approval", "plurality", "anti_plurality"],
-    "condorcet_rules_comp_study" : ["chamberlin_courant", "bloc", "monroe", "stv", "pav"]
+    "ranked_ballot_rules" : ["borda", "borda_top_cand", "chamberlin_courant", "monroe", "stv", "pav", "bloc"],
+    "approval_ballot_rules" : ["approval"],
+    "plurality_ballot_rules" : ["plurality", "anti_plurality"]
 }
 
 for voting_rule_type in voting_rules_list_dict.keys():
@@ -92,8 +119,8 @@ for voting_rule_type in voting_rules_list_dict.keys():
     # create a folder for given voting rule if the folder doest exsit already
     # os.makedirs(curr_dir + "/numerical_results/" + voting_rule, exist_ok=True)
     # os.makedirs(curr_dir + "/graph_results/" + voting_rule, exist_ok=True)
-    os.makedirs(curr_dir + "/graph_results/{}/".format(voting_rule_type), exist_ok=True)
-    os.makedirs(curr_dir + "/numerical_results/{}/".format(voting_rule_type), exist_ok=True)
+    os.makedirs(curr_dir + "/graph_results/voting_rules_comp_study/{}/".format(voting_rule_type), exist_ok=True)
+    os.makedirs(curr_dir + "/numerical_results/voting_rules_comp_study/{}/".format(voting_rule_type), exist_ok=True)
 
 
     # save config setting and iteration details in result dictionary
@@ -109,7 +136,7 @@ for voting_rule_type in voting_rules_list_dict.keys():
                 "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.json'
 
     # file path for numerical results of the experiment, store all the data collected during the experiment in this file
-    output_path = os.path.join(curr_dir + "/numerical_results/{}/".format(voting_rule_type), output_file)
+    output_path = os.path.join(curr_dir + "/numerical_results/voting_rules_comp_study/{}/".format(voting_rule_type), output_file)
 
     for voting_rule in voting_rules_list_dict[voting_rule_type]:
         
@@ -157,32 +184,35 @@ for voting_rule_type in voting_rules_list_dict.keys():
             avg_score_arr[i] /= avg_runs
             # avg_num_ties[i] /= avg_runs
         
-        result["graph_coords"][voting_rule]["avg_score_arr"] = avg_score_arr
+        result["graph_coords"][voting_rule]["avg_score_arr"] = {}
+        result["graph_coords"][voting_rule]["avg_score_arr"]["strategic"] = avg_score_arr
+        result["graph_coords"][voting_rule]["avg_score_arr"]["true"] = [avg_score_arr[0]]*(iterations//batch)
         # result["graph_coords"][voting_rule]["avg_num_ties"] = avg_num_ties
 
-        result["graph_coords"]["base_{}".format(voting_rule)] = {}
-        result["graph_coords"]["base_{}".format(voting_rule)]["avg_score_arr"] = [avg_score_arr[0]]*(iterations//batch)
+        # result["graph_coords"]["base_{}".format(voting_rule)] = {}
+        # result["graph_coords"]["base_{}".format(voting_rule)]["avg_score_arr"] = [avg_score_arr[0]]*(iterations//batch)
 
     # graphs for showing avg borda score for given voting setting 
     plot = plt.figure()
+    idx = 0
     for voting_rule in result["graph_coords"].keys():
         print(voting_rule)
-        print(result["graph_coords"][voting_rule]["avg_score_arr"][0], result["graph_coords"][voting_rule]["avg_score_arr"][-1])
-        plt.plot(num_iter_arr, result["graph_coords"][voting_rule]["avg_score_arr"], label=voting_rule)
+        print(result["graph_coords"][voting_rule]["avg_score_arr"]["true"][0], result["graph_coords"][voting_rule]["avg_score_arr"]["strategic"][-1])
+        data_series = pd.Series(result["graph_coords"][voting_rule]["avg_score_arr"]["strategic"])
+        smoothed_data = data_series.rolling(window=100, min_periods=1).mean()
+        plt.plot(num_iter_arr, smoothed_data, label=voting_rules_labels[voting_rule], color=colors[idx], linestyle='-')
+        plt.plot(num_iter_arr, result["graph_coords"][voting_rule]["avg_score_arr"]["true"], label=voting_rules_labels["true_{}".format(voting_rule)], color=colors[idx], linestyle='--')
+        idx += 1
         # plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
 
     plt.legend(loc='upper right')
     plt.xlabel("Number of iterations")
-    plt.ylabel("Avg Score")
+    plt.ylabel("Avg. Borda Score")
     # plt.ylim(0, actual_highest_vote_per_approval + 1)
     plt.show()
-    if voting_rule == "approval":
-        graph_file = 'avg_score_setting_{}_test_config_{}_tie_breaking_rule_{}_approval_count_{}_voter_'.format(voting_setting, key, tie_breaking_rule, approval_count) + str(num_voters) + '_cand_' + str(num_candidates) + \
-                    "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'
-    else:
-        graph_file = 'avg_score_setting_{}_test_config_{}_tie_breaking_rule_{}_voter_'.format(voting_setting, key, tie_breaking_rule) + str(num_voters) + '_cand_' + str(num_candidates) + \
-                    "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'
-    graph_path = os.path.join(curr_dir + "/graph_results/{}/".format(voting_rule_type), graph_file)
+    graph_file = 'avg_score_setting_{}_test_config_{}_tie_breaking_rule_{}_approval_count_{}_voter_'.format(voting_setting, key, tie_breaking_rule, approval_count) + str(num_voters) + '_cand_' + str(num_candidates) + \
+                "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'
+    graph_path = os.path.join(curr_dir + "/graph_results/voting_rules_comp_study/{}/".format(voting_rule_type), graph_file)
 
     plt.savefig(graph_path)
 
@@ -204,7 +234,7 @@ for voting_rule_type in voting_rules_list_dict.keys():
     else:
         graph_file = 'avg_ties_setting_{}_test_config_{}_tie_breaking_rule_{}_voter_'.format(voting_setting, key, tie_breaking_rule) + str(num_voters) + '_cand_' + str(num_candidates) + \
                     "_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'
-    graph_path = os.path.join(curr_dir + "/graph_results/{}/".format(voting_rule_type), graph_file)
+    graph_path = os.path.join(curr_dir + "/graph_results/voting_rules_comp_study/{}/".format(voting_rule_type), graph_file)
 
     plt.savefig(graph_path)
 
@@ -252,7 +282,7 @@ for voting_rule_type in voting_rules_list_dict.keys():
         print(monotonicity_check)
         output_file = 'monotonicity_check_setting_{}_{}_voter_'.format(voting_setting, voting_rule) + str(num_voters) + '_cand_' + str(num_candidates) + \
                         "_committee_size_" + '_'.join(str(size) for size in committee_size_list) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.json'
-        output_path = os.path.join(curr_dir + "/numerical_results/{}/".format(voting_rule_type), output_file)
+        output_path = os.path.join(curr_dir + "/numerical_results/voting_rules_comp_study/{}/".format(voting_rule_type), output_file)
 
         with open(output_path, "w+") as f:
             json.dump(monotonicity_check, f, default=int)
