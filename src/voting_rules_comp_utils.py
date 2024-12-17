@@ -4,6 +4,7 @@ import pandas as pd
 from scipy import stats
 import matplotlib.pyplot as plt
 from read_result import read_results
+from matplotlib.ticker import FormatStrFormatter
 
 
 def get_borda_score(curr_voting_profile, num_alternatives):
@@ -24,10 +25,6 @@ def get_borda_score(curr_voting_profile, num_alternatives):
 
 
 curr_dir = os.path.dirname(os.getcwd())
-# voting_rules_list_dict = {
-#     "score_based_rules_comp_study" : ["borda", "borda_top_cand", "approval", "plurality", "anti_plurality"],
-#     "condorcet_rules_comp_study" : ["chamberlin_courant", "bloc", "monroe", "stv", "pav"]
-# }
 
 
 voting_rules_labels_utils = {
@@ -71,8 +68,8 @@ colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e3
 
 voting_rules_list_dict = {
     "plurality_ballot_rules" : ["plurality", "anti_plurality"],
-    "approval_ballot_rules" : ["approval"],
-    "ranked_ballot_rules" : ["borda", "chamberlin_courant", "monroe", "stv", "pav", "bloc"]
+    "approval_ballot_rules" : ["approval", "pav"],
+    "ranked_ballot_rules" : ["borda", "chamberlin_courant", "monroe", "stv", "bloc"]
 }
 
 for voting_rule_type in voting_rules_list_dict.keys():
@@ -152,20 +149,26 @@ for voting_rule_type in voting_rules_list_dict.keys():
 				kt_dict_interval[voting_rule] = [kt_dict[voting_rule]]
 			else:
 				kt_dict_interval[voting_rule].append(kt_dict[voting_rule])
-	plot = plt.figure()
+	
+	fig, ax = plt.subplots()
 
 	# for test in kt_dict_interval.keys():
 	for voting_rule in kt_dict_interval.keys():
 		data_series = pd.Series(kt_dict_interval[voting_rule])
 		smoothed_data = data_series.rolling(window=50, center=True, min_periods=1).mean()
-		plt.plot(range(iterations - 1, end_interval, -window_size), smoothed_data.to_list(), label=voting_rules_labels_utils[voting_rule])
+		ax.plot(range(iterations - 1, end_interval, -window_size), smoothed_data.to_list(), label=voting_rules_labels_utils[voting_rule])
 
 	curr_dir = os.path.dirname(os.getcwd())
 	os.makedirs(curr_dir + "/graph_results/voting_rules_comp_study/{}/".format(voting_rule_type), exist_ok=True)
 
+	plt.text(.9, .01, "n: {}, m: {}, k: {}, approval count: {}".format(num_voters, num_candidates, committee_size, approval_count),
+		fontsize=10, ha='right', va='bottom', transform=ax.transAxes)
+
 	plt.legend(loc='upper right')
-	plt.xlabel("Number of iterations")
-	plt.ylabel("Avg. Kendall-Tau correlation")
+	plt.xlabel("Number of iterations", fontsize=12)
+	plt.ylabel("Avg. Kendall-Tau correlation", fontsize=12)
+	plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+	# plt.tight_layout()
 	plt.show()
 
 	graph_file = 'kt_distance_setting_{}_test_config_{}_tie_breaking_rule_{}_voter_'.format(voting_setting, test, tie_breaking_rule) + str(num_voters) + '_cand_' + str(num_candidates) + \
@@ -197,28 +200,33 @@ for voting_rule_type in voting_rules_list_dict.keys():
 		return cost_dict
 
 
-	# # plot cost of strgategy
-	# cost_of_strategy_dict = cost_of_strategy()
+	# plot cost of strgategy
+	cost_of_strategy_dict = cost_of_strategy()
 
-	# plot = plt.figure()
+	fig, ax = plt.subplots()
 
-	# for voting_rule in cost_of_strategy_dict.keys():
-	# 	data_series = pd.Series(cost_of_strategy_dict[voting_rule])
-	# 	smoothed_data = data_series.rolling(window=100, min_periods=1).mean()
-	# 	plt.plot(range(len(smoothed_data)), smoothed_data, label=voting_rules_labels_utils[voting_rule])
+	for voting_rule in cost_of_strategy_dict.keys():
+		data_series = pd.Series(cost_of_strategy_dict[voting_rule])
+		smoothed_data = data_series.rolling(window=100, min_periods=1).mean()
+		ax.plot(range(len(smoothed_data)), smoothed_data, label=voting_rules_labels_utils[voting_rule])
 
-	# curr_dir = os.path.dirname(os.getcwd())
-	# os.makedirs(curr_dir + "/graph_results/{}/".format(voting_rule_type), exist_ok=True)
+	curr_dir = os.path.dirname(os.getcwd())
+	os.makedirs(curr_dir + "/graph_results/{}/".format(voting_rule_type), exist_ok=True)
+	
+	plt.text(.9, .01, "n: {}, m: {}, k: {}, approval count: {}".format(num_voters, num_candidates, committee_size, approval_count),
+		fontsize=10, ha='right', va='bottom', transform=ax.transAxes)
 
-	# plt.legend(loc='upper right')
-	# plt.xlabel("Number of iterations")
-	# plt.ylabel("Avg. cost of strategy " + r"$\frac{\beta(r_T)}{\beta(r_S)}$")
-	# plt.show()
-	# graph_file = 'cost_of_strategy_setting_{}_tie_breaking_{}_approval_count_{}_voter_'.format(voting_setting, tie_breaking_rule, approval_count) + str(num_voters) + '_cand_' + str(num_candidates) + \
-	# 			"_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'
-	# graph_path = os.path.join(curr_dir + "/graph_results/voting_rules_comp_study/{}/".format(voting_rule_type), graph_file)
+	plt.legend(loc='upper right')
+	plt.xlabel("Number of iterations", fontsize=12)
+	plt.ylabel("Avg. cost of strategy " + r"$\frac{\beta(r_S)}{\beta(r_T)}$", fontsize=12)
+	plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+	plt.tight_layout()
+	plt.show()
+	graph_file = 'cost_of_strategy_setting_{}_tie_breaking_{}_approval_count_{}_voter_'.format(voting_setting, tie_breaking_rule, approval_count) + str(num_voters) + '_cand_' + str(num_candidates) + \
+				"_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'
+	graph_path = os.path.join(curr_dir + "/graph_results/voting_rules_comp_study/{}/".format(voting_rule_type), graph_file)
 
-	# plt.savefig(graph_path)
+	plt.savefig(graph_path)
 
 
 

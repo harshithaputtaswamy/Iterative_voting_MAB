@@ -52,9 +52,9 @@ avg_runs = 50
 iterations = 50000
 batch = 1000
 
-# avg_runs = 10
-# iterations = 10000
-# batch = 1
+# avg_runs = 1
+# iterations = 100
+# batch = 10
 
 
 # create dictionary to save the monotonicity results of different test configs
@@ -105,8 +105,8 @@ voting_rules_labels = {
 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2']
 
 voting_rules_list_dict = {
-    "ranked_ballot_rules" : ["borda", "borda_top_cand", "chamberlin_courant", "monroe", "stv", "pav", "bloc"],
-    "approval_ballot_rules" : ["approval"],
+    "ranked_ballot_rules" : ["borda", "chamberlin_courant", "monroe", "stv", "bloc"],
+    "approval_ballot_rules" : ["approval", "pav"],
     "plurality_ballot_rules" : ["plurality", "anti_plurality"]
 }
 
@@ -193,7 +193,7 @@ for voting_rule_type in voting_rules_list_dict.keys():
         # result["graph_coords"]["base_{}".format(voting_rule)]["avg_score_arr"] = [avg_score_arr[0]]*(iterations//batch)
 
     # graphs for showing avg borda score for given voting setting 
-    plot = plt.figure()
+    fig, ax = plt.subplots()
     idx = 0
     for voting_rule in result["graph_coords"].keys():
         print(voting_rule)
@@ -206,8 +206,11 @@ for voting_rule_type in voting_rules_list_dict.keys():
         # plt.text("epsilon - {}, epsilon decay - {}".format(input_conf[key]["epsilon"], input_conf[key]["epsilon_decay"]))
 
     plt.legend(loc='upper right')
-    plt.xlabel("Number of iterations")
-    plt.ylabel("Avg. Borda Score")
+    plt.text(.9, .01, "n: {}, m: {}, k: {}, approval count: {}".format(num_voters, num_candidates, committee_size, approval_count),
+        fontsize=10, ha='right', va='bottom', transform=ax.transAxes)
+
+    plt.xlabel("Number of iterations", fontsize = 12)
+    plt.ylabel("Avg. Borda Score", fontsize = 12)
     # plt.ylim(0, actual_highest_vote_per_approval + 1)
     plt.show()
     graph_file = 'avg_score_setting_{}_test_config_{}_tie_breaking_rule_{}_approval_count_{}_voter_'.format(voting_setting, key, tie_breaking_rule, approval_count) + str(num_voters) + '_cand_' + str(num_candidates) + \
