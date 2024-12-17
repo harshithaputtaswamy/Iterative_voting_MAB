@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from preflibtools.properties import borda_scores
 from itertools import permutations, combinations
+from read_result import read_results
 
 
 # data_file_name = {
@@ -53,8 +54,8 @@ iterations = 50000
 batch = 1000
 
 # avg_runs = 1
-# iterations = 100
-# batch = 10
+# iterations = 10000
+# batch = 100
 
 
 # create dictionary to save the monotonicity results of different test configs
@@ -105,8 +106,8 @@ voting_rules_labels = {
 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2']
 
 voting_rules_list_dict = {
-    "ranked_ballot_rules" : ["borda", "chamberlin_courant", "monroe", "stv", "bloc"],
-    "approval_ballot_rules" : ["approval", "pav"],
+    "ranked_ballot_rules" : ["borda", "chamberlin_courant", "monroe", "stv"],
+    "approval_ballot_rules" : ["approval", "pav", "bloc"],
     "plurality_ballot_rules" : ["plurality", "anti_plurality"]
 }
 

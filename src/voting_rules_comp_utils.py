@@ -68,15 +68,20 @@ colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e3
 
 voting_rules_list_dict = {
     "plurality_ballot_rules" : ["plurality", "anti_plurality"],
-    "approval_ballot_rules" : ["approval", "pav"],
-    "ranked_ballot_rules" : ["borda", "chamberlin_courant", "monroe", "stv", "bloc"]
+    "approval_ballot_rules" : ["approval", "pav", "bloc"],
+    "ranked_ballot_rules" : ["borda", "chamberlin_courant", "monroe", "stv"]
 }
+
+
+
+
+
+
+file_to_read = "setting_1_test_config_test_3_tie_breaking_rule_rand_approval_count_2_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
 
 for voting_rule_type in voting_rules_list_dict.keys():
 
-	file_to_read = "setting_1_test_config_test_3_tie_breaking_rule_rand_approval_count_2_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
 	file_to_read = curr_dir + "/numerical_results/voting_rules_comp_study/{}/".format(voting_rule_type) + file_to_read
-
 
 	read_result = read_results(file_to_read)
 	run_setting = read_result.get_run_setting()
@@ -181,7 +186,7 @@ for voting_rule_type in voting_rules_list_dict.keys():
 
 	def cost_of_strategy():
 		cost_dict = {}
-		for voting_rule in rewards.keys():
+		for voting_rule in voting_rule_list:
 			if voting_rule != "borda_top_cand":
 				print("voting_rule: ", voting_rule)
 				cost_dict[voting_rule] = []
@@ -231,9 +236,9 @@ for voting_rule_type in voting_rules_list_dict.keys():
 
 
 	# # graphs for showing avg borda score for given voting setting 
-	# plot = plt.figure()
+	# fig, ax = plt.subplots()
 	# idx = 0
-	# for voting_rule in avg_score_coords.keys():
+	# for voting_rule in voting_rule_list:
 	# 	if voting_rule != "borda_top_cand":
 	# 		print(voting_rule)
 	# 		print(avg_score_coords[voting_rule]["avg_score_arr"]["true"][0], avg_score_coords[voting_rule]["avg_score_arr"]["strategic"][-1])
@@ -243,10 +248,14 @@ for voting_rule_type in voting_rules_list_dict.keys():
 	# 		plt.plot([i for i in range(batch, iterations + 1, batch)], avg_score_coords[voting_rule]["avg_score_arr"]["true"], label=voting_rules_labels["true_{}".format(voting_rule)], color=colors[idx], linestyle='--')
 	# 		idx += 1
 
+	# plt.text(.9, .01, "n: {}, m: {}, k: {}, approval count: {}".format(num_voters, num_candidates, committee_size, approval_count),
+	# 	fontsize=10, ha='right', va='bottom', transform=ax.transAxes)
+
 	# plt.legend(loc='upper right')
-	# plt.xlabel("Number of iterations")
-	# plt.ylabel("Avg. Borda Score")
-	# # plt.ylim(0, actual_highest_vote_per_approval + 1)
+	# plt.xlabel("Number of iterations", fontsize=12)
+	# plt.ylabel("Avg. Borda Score", fontsize=12)
+	# plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+	# # plt.tight_layout()
 	# plt.show()
 	# graph_file = 'avg_score_setting_{}_test_config_{}_tie_breaking_rule_{}_approval_count_{}_voter_'.format(voting_setting, test, tie_breaking_rule, approval_count) + str(num_voters) + '_cand_' + str(num_candidates) + \
 	# 			"_committee_size_" + str(committee_size) + "_iter_" + str(iterations) + "_avg_" + str(avg_runs) + '.png'

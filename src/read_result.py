@@ -112,3 +112,13 @@ class read_results():
                 curr_run = curr_test[run]
                 rewards[voting_rule][run] = curr_run["predicted_prefrence_values"]["rewards"]     # preference = [ith iter {voter: [preference]}], list of voter preference dictionary over i iterations
         return rewards
+    
+    def get_voting_rules_comp_true_preference(self):
+        true_profile = []
+        # for voting_rule in self.test_details.keys():
+        voting_rule = "plurality"
+        curr_test = self.test_details[voting_rule]
+        for run in curr_test.keys():
+            curr_run = curr_test[run]
+            true_profile.append(curr_run["true_preference_values"]["profile"])     # preference = [ith iter {voter: [preference]}], list of voter preference dictionary over i iterations
+        return true_profile
