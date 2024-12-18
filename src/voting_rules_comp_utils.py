@@ -72,11 +72,6 @@ voting_rules_list_dict = {
     "ranked_ballot_rules" : ["borda", "chamberlin_courant", "monroe", "stv"]
 }
 
-
-
-
-
-
 file_to_read = "setting_1_test_config_test_3_tie_breaking_rule_rand_approval_count_2_voter_10_cand_5_committee_size_3_iter_50000_avg_50.json"
 
 for voting_rule_type in voting_rules_list_dict.keys():
@@ -262,5 +257,4 @@ for voting_rule_type in voting_rules_list_dict.keys():
 	# graph_path = os.path.join(curr_dir + "/graph_results/voting_rules_comp_study/{}/".format(voting_rule_type), graph_file)
 
 	# plt.savefig(graph_path)
-
 
